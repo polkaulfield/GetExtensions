@@ -29,13 +29,12 @@ class ExtensionManager():
 
         # Iterate through the different releases and get the matching one for your gnome version and failsafe to the lastest release
         for key, value in releases.items():
-            if version.startswith(key):
+            if self.version.startswith(key):
                 extension_id = str(value["pk"])
         if extension_id == "":
             extension_id = str(releases[max(releases)]["pk"])
 
         # Download and install
-        print(uuid)
         self.download("https://extensions.gnome.org/download-extension/" + uuid + ".shell-extension.zip?version_tag=" + extension_id, uuid)
         self.install(uuid)
 

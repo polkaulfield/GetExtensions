@@ -51,18 +51,22 @@ class MainWindow(Gtk.Window):
         self.searchbutton.connect("clicked", self.on_searchbutton_clicked)
         self.searchbox.pack_start(self.searchbutton, True, True, 0)
 
-        # Create and attach ListBox1 to page1
+        # Create and attach ListBox1 and install button to page1
         self.listbox1 = Gtk.ListBox()
         self.page1.pack_start(self.listbox1, True, True, 0)
+        self.listbox1.connect("row-selected", self.on_listbox1_row_selected)
         self.installbutton = Gtk.Button(label="Install")
         self.installbutton.connect("clicked", self.on_installbutton_clicked)
+        self.installbutton.set_sensitive(False)
         self.page1.pack_end(self.installbutton, True, True, 0)
 
         # Create and attach ListBox2 and delete button to page2
         self.listbox2 = Gtk.ListBox()
         self.page2.pack_start(self.listbox2, True, True, 0)
+        self.listbox2.connect("row-selected", self.on_listbox2_row_selected)
         self.removebutton = Gtk.Button(label="Remove")
         self.removebutton.connect("clicked", self.on_removebutton_clicked)
+        self.removebutton.set_sensitive(False)
         self.page2.pack_end(self.removebutton, True, True, 0)
 
         # Create the ExtensionsManagerobject
@@ -83,12 +87,14 @@ class MainWindow(Gtk.Window):
         # Display after refresh
         self.listbox2.show_all()
         self.show_all()
-        print(self.extmgr.installed)
 
     def ShowResults(self):
         # Clear old entries
         for entry in self.listbox1.get_children():
             self.listbox1.remove(entry)
+        
+        # Disable install button until you have something selected
+        self.installbutton.set_sensitive(False)
 
         # Refresh results and populate list
         self.extmgr.search(self.entry.get_text())
@@ -118,10 +124,15 @@ class MainWindow(Gtk.Window):
     def on_removebutton_clicked(self, widget):
         self.removebutton.set_sensitive(False)
         id = self.listbox2.get_selected_row().get_index()
-        print(id)
         self.extmgr.remove(self.extmgr.installed[id])
         self.removebutton.set_sensitive(True)
         self.ShowInstalledExtensions()
+    
+    def on_listbox1_row_selected(self, widget, row):
+        self.installbutton.set_sensitive(True)
+    
+    def on_listbox2_row_selected(self, widget, row):
+        self.removebutton.set_sensitive(True)
 
 win = MainWindow()
 win.show_all()
