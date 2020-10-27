@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
@@ -36,7 +37,7 @@ class MainWindow(Gtk.Window):
         self.notebook.append_page(self.page1, Gtk.Label(label="Download Extensions"))
 
         # Layout for page2
-        self.page2 = Gtk.Box()
+        self.page2 = Gtk.VBox()
         self.page2.set_border_width(10)
         self.notebook.append_page(self.page2, Gtk.Label(label="Installed Extensions"))
 
@@ -60,9 +61,12 @@ class MainWindow(Gtk.Window):
         self.installbutton.connect("clicked", self.on_installbutton_clicked)
         self.page1.pack_end(self.installbutton, True, True, 0)
 
-        # Create and attach ListBox2 to page2
+        # Create and attach ListBox2 and delete button to page2
         self.listbox2 = Gtk.ListBox()
         self.page2.pack_start(self.listbox2, True, True, 0)
+        self.removebutton = Gtk.Button(label="Remove")
+        self.removebutton.connect("clicked", self.on_removebutton_clicked)
+        self.page2.pack_end(self.removebutton, True, True, 0)
 
         # Create the ExtensionsManagerobject
         self.extmgr = extensionmanager.ExtensionManager()
@@ -71,17 +75,19 @@ class MainWindow(Gtk.Window):
         self.ShowInstalledExtensions()
 
     def ShowInstalledExtensions(self):
-        print("running")
-        print(self.extmgr.installed)
+        # Clear old entries
+        for entry in self.listbox2.get_children():
+            self.listbox2.remove(entry)
+
         for name in self.extmgr.installed:
-            print(name)
             listboxrow = ListBoxRowWithData(name)
             self.listbox2.add(listboxrow)
-        
+
         # Display after refresh
         self.listbox2.show_all()
         self.show_all()
-    
+        print(self.extmgr.installed)
+
     def ShowResults(self):
         # Clear old entries
         for entry in self.listbox1.get_children():
@@ -92,19 +98,28 @@ class MainWindow(Gtk.Window):
         for result in self.extmgr.results:
             listboxrow = ListBoxRowWithData(result["name"])
             self.listbox1.add(listboxrow)
-        
+
         # Display after refresh
         self.listbox1.show_all()
         self.show_all()
-    
+
     def on_searchbutton_clicked(self, widget):
         self.ShowResults()
-    
+
     def on_installbutton_clicked(self, widget):
         self.installbutton.set_sensitive(False)
         id = self.listbox1.get_selected_row().get_index()
-        self.extmgr.getExtension(id)
+        self.extmgr.getExtension(self.extmgr.results[id]["uuid"])
         self.installbutton.set_sensitive(True)
+        self.ShowInstalledExtensions()
+    
+    def on_removebutton_clicked(self, widget):
+        self.removebutton.set_sensitive(False)
+        id = self.listbox2.get_selected_row().get_index()
+        print(id)
+        self.extmgr.remove(self.extmgr.installed[id])
+        self.removebutton.set_sensitive(True)
+        self.ShowInstalledExtensions()
 
 win = MainWindow()
 win.show_all()
