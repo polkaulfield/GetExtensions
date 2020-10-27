@@ -41,13 +41,10 @@ class MainWindow(Gtk.Window):
         self.page2.set_border_width(10)
         self.notebook.append_page(self.page2, Gtk.Label(label="Installed Extensions"))
 
-        # Create and attach SearchBar to grid
-        self.searchbar = Gtk.SearchBar()
-        self.searchentry = Gtk.SearchEntry()
-        self.searchbar.connect_entry(self.searchentry)
-        self.searchbar.add(self.searchentry)
-        self.searchbar.set_search_mode(True)
-        self.searchbox.pack_start(self.searchbar, True, True, 0)
+        # Create and attach Entry field to grid
+        self.entry = Gtk.Entry()
+        self.entry.connect("key-press-event",self.on_key_press_event)
+        self.searchbox.pack_start(self.entry, True, True, 0)
 
         # Create and attach search button
         self.searchbutton = Gtk.Button(label="Search")
@@ -94,7 +91,7 @@ class MainWindow(Gtk.Window):
             self.listbox1.remove(entry)
 
         # Refresh results and populate list
-        self.extmgr.search(self.searchentry.get_text())
+        self.extmgr.search(self.entry.get_text())
         for result in self.extmgr.results:
             listboxrow = ListBoxRowWithData(result["name"])
             self.listbox1.add(listboxrow)
@@ -102,6 +99,11 @@ class MainWindow(Gtk.Window):
         # Display after refresh
         self.listbox1.show_all()
         self.show_all()
+    
+    def on_key_press_event(self, widget, event):
+        # Enter key value
+        if event.keyval == 65293:
+            self.ShowResults()
 
     def on_searchbutton_clicked(self, widget):
         self.ShowResults()

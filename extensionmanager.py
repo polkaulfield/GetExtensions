@@ -1,15 +1,13 @@
 #!/usr/bin/python3
 import os, requests, json, lxml.html, subprocess, zipfile, shutil
 
-# Get GNOME version
-version = subprocess.Popen("gnome-shell --version", shell=True, stdout=subprocess.PIPE).stdout.read().decode().split()[2]
-
 class ExtensionManager():
 
     def __init__(self):
         self.extensions_path = os.getenv("HOME") + "/.local/share/gnome-shell/extensions/"
         self.results = []
         self.installed = self.listExtensions()
+        self.version = subprocess.Popen("gnome-shell --version", shell=True, stdout=subprocess.PIPE).stdout.read().decode().split()[2]
     
     def listExtensions(self):
         return os.listdir(self.extensions_path)
