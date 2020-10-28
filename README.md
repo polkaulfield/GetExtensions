@@ -4,4 +4,6 @@ It can search from the website, get the lastest extension compatible with your G
 
 It's in beta state but everything works so far. 
 
+Dependencies: os, requests, json, lxml, subprocess, zipfile, shutil, gi
+
 ![Alt text](preview.png?raw=true "Preview")
