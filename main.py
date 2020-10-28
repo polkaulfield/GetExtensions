@@ -6,13 +6,11 @@ from gi.repository import Gtk
 # Local modules
 import extensionmanager
 
-
 class ListBoxRowWithData(Gtk.ListBoxRow):
     def __init__(self, data):
         super(Gtk.ListBoxRow, self).__init__()
         self.data = data
         self.add(Gtk.Label(label=data))
-
 
 class MainWindow(Gtk.Window):
     def __init__(self):
@@ -73,9 +71,9 @@ class MainWindow(Gtk.Window):
         self.extmgr = extensionmanager.ExtensionManager()
 
         # Populate page2
-        self.ShowInstalledExtensions()
+        self.show_installed_extensions()
 
-    def ShowInstalledExtensions(self):
+    def show_installed_extensions(self):
         # Clear old entries
         for entry in self.listbox2.get_children():
             self.listbox2.remove(entry)
@@ -88,7 +86,7 @@ class MainWindow(Gtk.Window):
         self.listbox2.show_all()
         self.show_all()
 
-    def ShowResults(self):
+    def show_results(self):
         # Clear old entries
         for entry in self.listbox1.get_children():
             self.listbox1.remove(entry)
@@ -109,24 +107,24 @@ class MainWindow(Gtk.Window):
     def on_key_press_event(self, widget, event):
         # Enter key value
         if event.keyval == 65293:
-            self.ShowResults()
+            self.show_results()
 
     def on_searchbutton_clicked(self, widget):
-        self.ShowResults()
+        self.show_results()
 
     def on_installbutton_clicked(self, widget):
         self.installbutton.set_sensitive(False)
         id = self.listbox1.get_selected_row().get_index()
-        self.extmgr.getExtension(self.extmgr.results[id]["uuid"])
+        self.extmgr.get_extensions(self.extmgr.results[id]["uuid"])
         self.installbutton.set_sensitive(True)
-        self.ShowInstalledExtensions()
+        self.show_installed_extensions()
     
     def on_removebutton_clicked(self, widget):
         self.removebutton.set_sensitive(False)
         id = self.listbox2.get_selected_row().get_index()
         self.extmgr.remove(self.extmgr.installed[id])
         self.removebutton.set_sensitive(True)
-        self.ShowInstalledExtensions()
+        self.show_installed_extensions()
     
     def on_listbox1_row_selected(self, widget, row):
         self.installbutton.set_sensitive(True)

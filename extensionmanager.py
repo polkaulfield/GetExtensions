@@ -6,19 +6,19 @@ class ExtensionManager():
     def __init__(self):
         self.extensions_path = os.getenv("HOME") + "/.local/share/gnome-shell/extensions/"
         self.results = []
-        self.installed = self.listExtensions()
+        self.installed = self.list_extensions()
         self.version = subprocess.Popen("gnome-shell --version", shell=True, stdout=subprocess.PIPE).stdout.read().decode().split()[2]
     
-    def listExtensions(self):
+    def list_extensions(self):
         return os.listdir(self.extensions_path)
 
     def search(self, query):
         response = requests.get("https://extensions.gnome.org/extension-query/?page=1&search=" + query)
         self.results = json.loads(response.text)["extensions"]
 
-    def getExtension(self, uuid):
+    def get_extensions(self, uuid):
         # Parse the extension webpage and get the json from the data-svm element
-        url = "https://extensions.gnome.org" + self.results[self.getindex(uuid)]["link"]
+        url = "https://extensions.gnome.org" + self.results[self.get_index(uuid)]["link"]
         response = requests.get(url)
         root = lxml.html.fromstring(response.text)
         content = root.xpath("/html/body/div[2]/div/div[2]/@data-svm")[0]
@@ -28,17 +28,24 @@ class ExtensionManager():
         extension_id = ""
 
         # Iterate through the different releases and get the matching one for your gnome version and failsafe to the lastest release
+        subversions = []
         for key, value in releases.items():
+            subversions.append(int(key[2:]))
             if self.version.startswith(key):
                 extension_id = str(value["pk"])
+        
+        # If the ID doesn't start with your current version, get the highest one
         if extension_id == "":
-            extension_id = str(releases[max(releases)]["pk"])
+            print(subversions)
+            print(str(max(subversions)))
+            highest_version = "3." + str(max(subversions))
+            extension_id = str(releases[highest_version]["pk"])
 
         # Download and install
         self.download("https://extensions.gnome.org/download-extension/" + uuid + ".shell-extension.zip?version_tag=" + extension_id, uuid)
         self.install(uuid)
 
-    def getindex(self, uuid):
+    def get_index(self, uuid):
         for index, entry in enumerate(self.results):
             if entry["uuid"] == uuid:
                 return index
@@ -54,7 +61,7 @@ class ExtensionManager():
         if os.path.isdir(install_path):
             print("Deleting " + uuid)
             shutil.rmtree(install_path)
-        self.installed = self.listExtensions()
+        self.installed = self.list_extensions()
     
     def install(self, uuid):
         # Remove old extension       
@@ -65,7 +72,7 @@ class ExtensionManager():
         os.mkdir(install_path)
         with zipfile.ZipFile(uuid + ".zip","r") as zip_ref:
             zip_ref.extractall(install_path)
-        self.installed = self.listExtensions()
+        self.installed = self.list_extensions()
         print("Installed " + uuid)
 
 
