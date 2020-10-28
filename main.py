@@ -29,6 +29,7 @@ class MainWindow(Gtk.Window):
 
         # Layout for page1
         self.page1 = Gtk.VBox()
+        self.page1.set_spacing(10)
         self.searchbox = Gtk.HBox()
         self.page1.pack_start(self.searchbox, True, True, 0)
         self.page1.set_border_width(10)
@@ -48,7 +49,7 @@ class MainWindow(Gtk.Window):
         self.searchbutton = Gtk.Button(label="Search")
         self.searchbutton.connect("clicked", self.on_searchbutton_clicked)
         self.searchbox.pack_start(self.searchbutton, True, True, 0)
-
+        
         # Create and attach ListBox1 and install button to page1
         self.listbox1 = Gtk.ListBox()
         self.page1.pack_start(self.listbox1, True, True, 0)
