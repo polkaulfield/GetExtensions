@@ -23,9 +23,10 @@ class MainWindow(Gtk.Window):
         hb.props.title = "Get Extensions"
         self.set_titlebar(hb)
 
-        # Create notebook for tabs
-        self.notebook = Gtk.Notebook()
-        self.add(self.notebook)
+        # Create stack
+        self.stack = Gtk.Stack()
+        self.stack.set_transition_type(Gtk.StackTransitionType.SLIDE_LEFT_RIGHT)
+        self.add(self.stack)
 
         # Layout for page1
         self.page1 = Gtk.VBox()
@@ -33,12 +34,12 @@ class MainWindow(Gtk.Window):
         self.searchbox = Gtk.HBox()
         self.page1.pack_start(self.searchbox, True, True, 0)
         self.page1.set_border_width(10)
-        self.notebook.append_page(self.page1, Gtk.Label(label="Download Extensions"))
+        self.stack.add_titled(self.page1, "download", "Download")
 
         # Layout for page2
         self.page2 = Gtk.VBox()
         self.page2.set_border_width(10)
-        self.notebook.append_page(self.page2, Gtk.Label(label="Installed Extensions"))
+        self.stack.add_titled(self.page2, "installed", "Installed")
 
         # Create and attach Entry field to grid
         self.entry = Gtk.Entry()
@@ -73,6 +74,11 @@ class MainWindow(Gtk.Window):
 
         # Populate page2
         self.show_installed_extensions()
+
+        # Create StackSwitcher
+        self.stackswitcher = Gtk.StackSwitcher()
+        self.stackswitcher.set_stack(self.stack)
+        hb.set_custom_title(self.stackswitcher)
 
     def show_installed_extensions(self):
         # Clear old entries
