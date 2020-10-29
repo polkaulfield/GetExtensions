@@ -10,7 +10,11 @@ class ExtensionManager():
         self.version = subprocess.Popen("gnome-shell --version", shell=True, stdout=subprocess.PIPE).stdout.read().decode().split()[2]
     
     def list_extensions(self):
-        return os.listdir(self.extensions_path)
+        try:
+            return os.listdir(self.extensions_path)
+        except FileNotFoundError:
+            os.mkdir(self.extensions_path)
+            return os.listdir(self.extensions_path)
 
     def search(self, query):
         response = requests.get("https://extensions.gnome.org/extension-query/?page=1&search=" + query)
