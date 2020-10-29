@@ -2,6 +2,8 @@
 import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
+from gi.repository.GdkPixbuf import Pixbuf, InterpType
+from gi.repository import Gio
 
 # Local modules
 import extensionmanager
@@ -37,6 +39,7 @@ class MainWindow(Gtk.Window):
 
         # Layout for page2
         self.page2 = Gtk.VBox()
+        self.page2.set_spacing(10)
         self.page2.set_border_width(10)
         self.notebook.append_page(self.page2, Gtk.Label(label="Installed Extensions"))
 
@@ -46,7 +49,7 @@ class MainWindow(Gtk.Window):
         self.searchbox.pack_start(self.entry, True, True, 0)
 
         # Create and attach search button
-        self.searchbutton = Gtk.Button(label="Search")
+        self.searchbutton = Gtk.Button(label="Search!")
         self.searchbutton.connect("clicked", self.on_searchbutton_clicked)
         self.searchbox.pack_start(self.searchbutton, True, True, 0)
         
@@ -88,6 +91,10 @@ class MainWindow(Gtk.Window):
         self.show_all()
 
     def show_results(self):
+        # Disable search button while searching
+        self.searchbutton.set_sensitive(False)
+        self.searchbutton.set_label("Searching...")
+
         # Clear old entries
         for entry in self.listbox1.get_children():
             self.listbox1.remove(entry)
@@ -97,13 +104,37 @@ class MainWindow(Gtk.Window):
 
         # Refresh results and populate list
         self.extmgr.search(self.entry.get_text())
-        for result in self.extmgr.results:
-            listboxrow = ListBoxRowWithData(result["name"])
+        for index, result in enumerate(self.extmgr.results):
+
+            # Create a box for each item
+            resultbox = Gtk.HBox()
+            name_label = Gtk.Label(label=result["name"])
+            name_label.set_halign(1)
+
+            # Download the image into a buffer and render it with pixbuf
+            img_buffer = self.extmgr.get_image(self.extmgr.get_uuid(index))
+            img_buffer = Gio.MemoryInputStream.new_from_data(img_buffer, None)
+            pixbuf = Pixbuf.new_from_stream(img_buffer, None)
+            pixbuf = pixbuf.scale_simple(32, 32, InterpType.BILINEAR)
+
+            img = Gtk.Image()
+            img.set_from_pixbuf(pixbuf)
+            img.set_halign(1)
+
+            resultbox.pack_start(img, True, True, 0)
+            resultbox.pack_end(name_label, True, True, 0)
+
+            listboxrow = Gtk.ListBoxRow()
+            listboxrow.add(resultbox)
             self.listbox1.add(listboxrow)
 
         # Display after refresh
         self.listbox1.show_all()
         self.show_all()
+
+        # Reenable search button
+        self.searchbutton.set_sensitive(True)
+        self.searchbutton.set_label("Search!")
     
     def on_key_press_event(self, widget, event):
         # Enter key value

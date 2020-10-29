@@ -10,16 +10,20 @@ class ExtensionManager():
         self.version = subprocess.Popen("gnome-shell --version", shell=True, stdout=subprocess.PIPE).stdout.read().decode().split()[2]
     
     def list_extensions(self):
-        return os.listdir(self.extensions_path)
+        try:
+            return os.listdir(self.extensions_path)
+        except FileNotFoundError:
+            os.mkdir(self.extensions_path)
+            return os.listdir(self.extensions_path)
 
     def search(self, query):
-        response = requests.get("https://extensions.gnome.org/extension-query/?page=1&search=" + query)
+        response = self.get_request("https://extensions.gnome.org/extension-query/?page=1&search=" + query)
         self.results = json.loads(response.text)["extensions"]
 
     def get_extensions(self, uuid):
         # Parse the extension webpage and get the json from the data-svm element
         url = "https://extensions.gnome.org" + self.results[self.get_index(uuid)]["link"]
-        response = requests.get(url)
+        response = self.get_request(url)
         root = lxml.html.fromstring(response.text)
         content = root.xpath("/html/body/div[2]/div/div[2]/@data-svm")[0]
         releases = json.loads(content)
@@ -49,9 +53,12 @@ class ExtensionManager():
         for index, entry in enumerate(self.results):
             if entry["uuid"] == uuid:
                 return index
+    
+    def get_uuid(self, index):
+        return self.results[index]["uuid"]
 
     def download(self, url, uuid):
-        response = requests.get(url)
+        response = get_request(url)
         with open(uuid + ".zip", "wb") as file:
             file.write(response.content)
         print("Downloaded " + uuid)
@@ -62,6 +69,17 @@ class ExtensionManager():
             print("Deleting " + uuid)
             shutil.rmtree(install_path)
         self.installed = self.list_extensions()
+    
+    def get_image(self, uuid):
+        response = self.get_request("https://extensions.gnome.org" + self.results[self.get_index(uuid)]["icon"])
+        return response.content
+    
+    def get_request(self, url):
+        try:
+            return requests.get(url)
+        except requests.ConnectionError:
+            print("[!] Cannot request " + url)
+            return None
     
     def install(self, uuid):
         # Remove old extension       
