@@ -106,14 +106,18 @@ class MainWindow(Gtk.Window):
         for entry in self.listbox2.get_children():
             self.listbox2.remove(entry)
 
+        # Refresh installed extensions (todo with get property, kinda spaghetti now)
+        self.extmgr.list_all_extensions()
+
         for item in self.extmgr.installed:            
             # Create a box for each item
             itembox = Gtk.HBox()
             name_label = Gtk.Label()
 
             # Check if the extension name is longer than 20 chars and trim it
-            if len(item["name"]) >= 30:
-                name_label.set_text(str=item["name"][:30] + "...")
+            num = 30
+            if len(item["name"]) >= num:
+                name_label.set_text(str=item["name"][:num] + "...")
             else:
                 name_label.set_text(str=item["name"])
 

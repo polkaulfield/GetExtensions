@@ -16,7 +16,7 @@ class ExtensionManager():
 
     def list_all_extensions(self):
         installed_extensions = []
-        uuids = self.list_system_extensions() + self.list_user_extensions()
+        uuids = self.list_user_extensions() + self.list_system_extensions()
         enabled_extensions = re.findall(r'\'(.+?)\'', self.run_command("gsettings get org.gnome.shell enabled-extensions"))
         for uuid in uuids:
             extension_data = {"uuid": uuid, "local": self.extension_is_local(uuid)}
