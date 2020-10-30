@@ -11,13 +11,12 @@ class ExtensionManager():
         self.version = self.run_command("gnome-shell --version").split()[2]
     
     def run_command(self, command):
-        return subprocess.Popen(command, shell=True, stdout=subprocess.PIPE).stdout.read().decode()
-    
+        return subprocess.Popen(command, shell=True, stdout=subprocess.PIPE).stdout.read().decode()    
 
 
     def list_all_extensions(self):
         installed_extensions = []
-        uuids = self.run_command("gnome-extensions list").split()
+        uuids = self.list_system_extensions() + self.list_user_extensions()
         enabled_extensions = re.findall(r'\'(.+?)\'', self.run_command("gsettings get org.gnome.shell enabled-extensions"))
         for uuid in uuids:
             extension_data = {"uuid": uuid, "local": self.extension_is_local(uuid)}
@@ -40,12 +39,16 @@ class ExtensionManager():
         else:
             return False
 
+    def list_system_extensions(self):
+        return os.listdir(self.extensions_sys_path)
+
     def list_user_extensions(self):
         try:
             return os.listdir(self.extensions_local_path)
         except FileNotFoundError:
             os.mkdir(self.extensions_local_path)
             return os.listdir(self.extensions_local_path)
+        print(os.listdir(self.extensions_local_path))
 
     def search(self, query):
         response = self.get_request("https://extensions.gnome.org/extension-query/?page=1&search=" + query)
