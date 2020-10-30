@@ -1,15 +1,38 @@
 #!/usr/bin/python3
-import os, requests, json, lxml.html, subprocess, zipfile, shutil
+import os, requests, json, lxml.html, subprocess, zipfile, shutil, re
 
 class ExtensionManager():
 
     def __init__(self):
         self.extensions_path = os.getenv("HOME") + "/.local/share/gnome-shell/extensions/"
         self.results = []
-        self.installed = self.list_extensions()
-        self.version = subprocess.Popen("gnome-shell --version", shell=True, stdout=subprocess.PIPE).stdout.read().decode().split()[2]
+        self.installed = self.list_all_extensions()
+        self.version = self.run_command("gnome-shell --version").split()[2]
     
-    def list_extensions(self):
+    def run_command(self, command):
+        return subprocess.Popen(command, shell=True, stdout=subprocess.PIPE).stdout.read().decode()
+    
+
+
+    def list_all_extensions(self):
+        installed_extensions = []
+        uuids = self.run_command("gnome-extensions list").split()
+        enabled_extensions = re.findall(r'\'(.+?)\'', self.run_command("gsettings get org.gnome.shell enabled-extensions"))
+        for uuid in uuids:
+            if uuid in enabled_extensions:
+                extension_data = {"uuid": uuid, "enabled": True, "local": self.extension_is_local(uuid)}
+            else:
+                extension_data = {"uuid": uuid, "enabled": False, "local": self.extension_is_local(uuid)}
+            installed_extensions.append(extension_data)
+        return installed_extensions
+    
+    def extension_is_local(self, uuid):
+        if uuid in self.list_user_extensions():
+            return True
+        else:
+            return False
+
+    def list_user_extensions(self):
         try:
             return os.listdir(self.extensions_path)
         except FileNotFoundError:
@@ -78,7 +101,7 @@ class ExtensionManager():
         if os.path.isdir(install_path):
             print("Deleting " + uuid)
             shutil.rmtree(install_path)
-        self.installed = self.list_extensions()
+        self.installed = self.list_all_extensions()
     
     def get_image(self, uuid):
         url = "https://extensions.gnome.org" + self.results[self.get_index(uuid)]["icon"]
@@ -98,6 +121,10 @@ class ExtensionManager():
             print("[!] Cannot request " + url)
             return 1
     
+    def set_extension_status(self, uuid, status):
+        self.run_command("gnome-extensions " + status + " " + uuid)
+        return
+    
     def get_zip_path(self, uuid):
         return "/tmp/" + uuid + ".zip"
 
@@ -112,7 +139,7 @@ class ExtensionManager():
         with zipfile.ZipFile(zip_path,"r") as zip_ref:
             zip_ref.extractall(install_path)
         os.remove(zip_path)
-        self.installed = self.list_extensions()
+        self.installed = self.list_all_extensions()
 
         print("Installed " + uuid)
 

@@ -106,8 +106,26 @@ class MainWindow(Gtk.Window):
         for entry in self.listbox2.get_children():
             self.listbox2.remove(entry)
 
-        for name in self.extmgr.installed:
-            listboxrow = ListBoxRowWithData(name)
+        for item in self.extmgr.installed:            
+            # Create a box for each item
+            itembox = Gtk.HBox()
+            uuid_label = Gtk.Label(item["uuid"])
+            print(item["uuid"])
+            uuid_label.set_halign(1)
+
+            switch = Gtk.Switch()
+            switch.connect("notify::active", self.on_switch_activated, item["uuid"])
+            switch.set_halign(1)
+            if item["enabled"] == True:
+                switch.set_active(True)
+            else:
+                switch.set_active(False)
+
+            itembox.pack_start(switch, True, True, 0)
+            itembox.pack_end(uuid_label, True, True, 0)
+
+            listboxrow = Gtk.ListBoxRow()
+            listboxrow.add(itembox)
             self.listbox2.add(listboxrow)
 
         # Display after refresh
@@ -115,7 +133,6 @@ class MainWindow(Gtk.Window):
         self.show_all()
     
     def show_error(self, message):
-
         # TODO error box
         print(message)
 
@@ -153,6 +170,7 @@ class MainWindow(Gtk.Window):
             listboxrow = Gtk.ListBoxRow()
             listboxrow.add(resultbox)
             self.listbox1.add(listboxrow)
+
         self.listbox1.show_all()
         self.show_all()
         
@@ -177,6 +195,14 @@ class MainWindow(Gtk.Window):
         # Start thread to add results
         self.search_thread = threading.Thread(target=self.search_from_entry)
         self.search_thread.start()
+
+    def on_switch_activated(self, switch, gparam, name):
+        if switch.get_active():
+            self.extmgr.set_extension_status(name, "enable")
+            print(name + " enabled")
+        else:
+            self.extmgr.set_extension_status(name, "disable")
+            print(name + " disabled")
     
     def on_key_press_event(self, widget, event):
         # Enter key value
@@ -196,7 +222,7 @@ class MainWindow(Gtk.Window):
     def on_removebutton_clicked(self, widget):
         self.removebutton.set_sensitive(False)
         id = self.listbox2.get_selected_row().get_index()
-        self.extmgr.remove(self.extmgr.installed[id])
+        self.extmgr.remove(self.extmgr.installed[id]["uuid"])
         self.removebutton.set_sensitive(True)
         self.show_installed_extensions()
     
@@ -204,7 +230,11 @@ class MainWindow(Gtk.Window):
         self.installbutton.set_sensitive(True)
     
     def on_listbox2_row_selected(self, widget, row):
-        self.removebutton.set_sensitive(True)
+        id = self.listbox2.get_selected_row().get_index()
+        if self.extmgr.installed[id]["local"]:
+            self.removebutton.set_sensitive(True)
+        else:
+            self.removebutton.set_sensitive(False)
 
 win = MainWindow()
 win.connect("destroy", Gtk.main_quit)
