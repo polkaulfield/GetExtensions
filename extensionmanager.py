@@ -4,7 +4,8 @@ import os, requests, json, lxml.html, subprocess, zipfile, shutil, re
 class ExtensionManager():
 
     def __init__(self):
-        self.extensions_path = os.getenv("HOME") + "/.local/share/gnome-shell/extensions/"
+        self.extensions_local_path = os.getenv("HOME") + "/.local/share/gnome-shell/extensions/"
+        self.extensions_sys_path = "/usr/share/gnome-shell/extensions/"
         self.results = []
         self.installed = self.list_all_extensions()
         self.version = self.run_command("gnome-shell --version").split()[2]
@@ -19,10 +20,17 @@ class ExtensionManager():
         uuids = self.run_command("gnome-extensions list").split()
         enabled_extensions = re.findall(r'\'(.+?)\'', self.run_command("gsettings get org.gnome.shell enabled-extensions"))
         for uuid in uuids:
+            extension_data = {"uuid": uuid, "local": self.extension_is_local(uuid)}
             if uuid in enabled_extensions:
-                extension_data = {"uuid": uuid, "enabled": True, "local": self.extension_is_local(uuid)}
+                extension_data["enabled"] = True
             else:
-                extension_data = {"uuid": uuid, "enabled": False, "local": self.extension_is_local(uuid)}
+                extension_data["enabled"] = False
+            if extension_data["local"] == True:
+                metadata = open(self.extensions_local_path + uuid + "/metadata.json", "r").read()
+            else:
+                metadata = open(self.extensions_sys_path + uuid + "/metadata.json").read()
+            metadata = json.loads(metadata)
+            extension_data["name"] = metadata["name"]
             installed_extensions.append(extension_data)
         return installed_extensions
     
@@ -34,10 +42,10 @@ class ExtensionManager():
 
     def list_user_extensions(self):
         try:
-            return os.listdir(self.extensions_path)
+            return os.listdir(self.extensions_local_path)
         except FileNotFoundError:
-            os.mkdir(self.extensions_path)
-            return os.listdir(self.extensions_path)
+            os.mkdir(self.extensions_local_path)
+            return os.listdir(self.extensions_local_path)
 
     def search(self, query):
         response = self.get_request("https://extensions.gnome.org/extension-query/?page=1&search=" + query)
@@ -97,7 +105,7 @@ class ExtensionManager():
         return 0
     
     def remove(self, uuid):
-        install_path = self.extensions_path + uuid
+        install_path = self.extensions_local_path + uuid
         if os.path.isdir(install_path):
             print("Deleting " + uuid)
             shutil.rmtree(install_path)
@@ -134,7 +142,7 @@ class ExtensionManager():
         zip_path = self.get_zip_path(uuid)
 
         # Create new folder with matching uuid and extract to it
-        install_path = self.extensions_path + uuid
+        install_path = self.extensions_local_path + uuid
         os.mkdir(install_path)
         with zipfile.ZipFile(zip_path,"r") as zip_ref:
             zip_ref.extractall(install_path)

@@ -109,9 +109,15 @@ class MainWindow(Gtk.Window):
         for item in self.extmgr.installed:            
             # Create a box for each item
             itembox = Gtk.HBox()
-            uuid_label = Gtk.Label(item["uuid"])
-            print(item["uuid"])
-            uuid_label.set_halign(1)
+            name_label = Gtk.Label()
+
+            # Check if the extension name is longer than 20 chars and trim it
+            if len(item["name"]) >= 30:
+                name_label.set_text(str=item["name"][:30] + "...")
+            else:
+                name_label.set_text(str=item["name"])
+
+            name_label.set_halign(1)
 
             switch = Gtk.Switch()
             switch.connect("notify::active", self.on_switch_activated, item["uuid"])
@@ -122,7 +128,7 @@ class MainWindow(Gtk.Window):
                 switch.set_active(False)
 
             itembox.pack_start(switch, True, True, 0)
-            itembox.pack_end(uuid_label, True, True, 0)
+            itembox.pack_end(name_label, True, True, 0)
 
             listboxrow = Gtk.ListBoxRow()
             listboxrow.add(itembox)
