@@ -25,57 +25,81 @@ class MainWindow(Gtk.Window):
         hb.props.title = "Get Extensions"
         self.set_titlebar(hb)
 
-        # Create notebook for tabs
-        self.notebook = Gtk.Notebook()
-        self.add(self.notebook)
-
-        # Layout for page1
-        self.page1 = Gtk.VBox()
-        self.page1.set_spacing(10)
-        self.searchbox = Gtk.HBox()
-        self.page1.pack_start(self.searchbox, True, True, 0)
-        self.page1.set_border_width(10)
-        self.notebook.append_page(self.page1, Gtk.Label(label="Download Extensions"))
-
-        # Layout for page2
-        self.page2 = Gtk.VBox()
-        self.page2.set_spacing(10)
-        self.page2.set_border_width(10)
-        self.notebook.append_page(self.page2, Gtk.Label(label="Installed Extensions"))
-
-        # Create and attach Entry field to grid
+        # Create Entry field to grid
         self.entry = Gtk.Entry()
         self.entry.connect("key-press-event",self.on_key_press_event)
-        self.searchbox.pack_start(self.entry, True, True, 0)
 
-        # Create and attach search button
+        # Create search button
         self.searchbutton = Gtk.Button(label="Search!")
         self.searchbutton.connect("clicked", self.on_searchbutton_clicked)
-        self.searchbox.pack_start(self.searchbutton, True, True, 0)
-        
-        # Create and attach ListBox1 and install button to page1
+
+        # Create ListBox1 and install button
         self.listbox1 = Gtk.ListBox()
-        self.page1.pack_start(self.listbox1, True, True, 0)
         self.listbox1.connect("row-selected", self.on_listbox1_row_selected)
         self.installbutton = Gtk.Button(label="Install")
         self.installbutton.connect("clicked", self.on_installbutton_clicked)
         self.installbutton.set_sensitive(False)
-        self.page1.pack_end(self.installbutton, True, True, 0)
 
         # Create and attach ListBox2 and delete button to page2
         self.listbox2 = Gtk.ListBox()
-        self.page2.pack_start(self.listbox2, True, True, 0)
         self.listbox2.connect("row-selected", self.on_listbox2_row_selected)
         self.removebutton = Gtk.Button(label="Remove")
         self.removebutton.connect("clicked", self.on_removebutton_clicked)
         self.removebutton.set_sensitive(False)
-        self.page2.pack_end(self.removebutton, True, True, 0)
+
+        # Create tabs
+        self.notebook = Gtk.Notebook()
+        self.add(self.notebook)
+
+        # Define grid1 and set layout
+        self.grid1 = Gtk.Grid()
+        self.notebook.append_page(self.grid1, Gtk.Label(label="Download Extensions"))
+
+        # Set grid1 padding
+        self.grid1.set_column_homogeneous(True)
+        self.grid1.set_margin_top(10)
+        self.grid1.set_margin_bottom(10)
+        self.grid1.set_margin_start(10)
+        self.grid1.set_margin_end(10)
+        self.grid1.set_column_spacing(10)
+        self.grid1.set_row_spacing(10)
+
+        # Populate grid1
+        self.grid1.add(self.entry)
+        self.grid1.attach(self.searchbutton, 1, 0, 1 ,1)
+        self.grid1.attach(self.listbox1,  0, 1, 2 ,1)
+        self.grid1.attach(self.installbutton,  0, 2, 2 ,1)
+
+        # Define grid2 and set layout
+        self.grid2 = Gtk.Grid()
+        self.notebook.append_page(self.grid2, Gtk.Label(label="Installed Extensions"))
+
+        # Set grid2 padding
+        self.grid2.set_column_homogeneous(True)
+        self.grid2.set_margin_top(10)
+        self.grid2.set_margin_bottom(10)
+        self.grid2.set_margin_start(10)
+        self.grid2.set_margin_end(10)
+        self.grid2.set_column_spacing(10)
+        self.grid2.set_row_spacing(10)
+
+        # Populate grid2
+        self.grid2.add(self.listbox2)
+        self.grid2.attach(self.removebutton, 0, 1, 1 ,1)
 
         # Create the ExtensionsManagerobject
         self.extmgr = extensionmanager.ExtensionManager()
 
         # Populate page2
         self.show_installed_extensions()
+
+        # Set focus on entry
+        self.entry.set_can_focus(True)
+        self.entry.grab_focus()
+
+        # Add no results to listbox
+        self.listbox1.add(ListBoxRowWithData("Search to show results!"))
+        self.listbox1.set_sensitive(False)
 
     def show_installed_extensions(self):
         # Clear old entries
@@ -96,6 +120,7 @@ class MainWindow(Gtk.Window):
         print(message)
 
     def search_from_entry(self):
+        self.listbox1.set_sensitive(False)
         if self.extmgr.search(self.entry.get_text()) == 1:
             self.show_error("Couldn't fetch the extensions list.")
         
@@ -132,6 +157,7 @@ class MainWindow(Gtk.Window):
         self.show_all()
         
         # Reenable search button
+        self.listbox1.set_sensitive(True)
         self.searchbutton.set_sensitive(True)
         self.searchbutton.set_label("Search!")
         return
@@ -181,5 +207,6 @@ class MainWindow(Gtk.Window):
         self.removebutton.set_sensitive(True)
 
 win = MainWindow()
+win.connect("destroy", Gtk.main_quit)
 win.show_all()
 Gtk.main()
