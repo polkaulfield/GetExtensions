@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-import gi
+import gi, threading
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
 from gi.repository.GdkPixbuf import Pixbuf, InterpType
@@ -89,20 +89,8 @@ class MainWindow(Gtk.Window):
         # Display after refresh
         self.listbox2.show_all()
         self.show_all()
-
-    def show_results(self):
-        # Disable search button while searching
-        self.searchbutton.set_sensitive(False)
-        self.searchbutton.set_label("Searching...")
-
-        # Clear old entries
-        for entry in self.listbox1.get_children():
-            self.listbox1.remove(entry)
-        
-        # Disable install button until you have something selected
-        self.installbutton.set_sensitive(False)
-
-        # Refresh results and populate list
+    
+    def search_from_entry(self):
         self.extmgr.search(self.entry.get_text())
         for index, result in enumerate(self.extmgr.results):
 
@@ -127,14 +115,29 @@ class MainWindow(Gtk.Window):
             listboxrow = Gtk.ListBoxRow()
             listboxrow.add(resultbox)
             self.listbox1.add(listboxrow)
-
-        # Display after refresh
-        self.listbox1.show_all()
-        self.show_all()
-
+            self.listbox1.show_all()
+            self.show_all()
+        
         # Reenable search button
         self.searchbutton.set_sensitive(True)
         self.searchbutton.set_label("Search!")
+        return
+
+    def show_results(self):
+        # Disable search button while searching
+        self.searchbutton.set_sensitive(False)
+        self.searchbutton.set_label("Searching...")
+
+        # Clear old entries
+        for entry in self.listbox1.get_children():
+            self.listbox1.remove(entry)
+        
+        # Disable install button until you have something selected
+        self.installbutton.set_sensitive(False)
+
+        # Start thread to add results
+        self.search_thread = threading.Thread(target=self.search_from_entry)
+        self.search_thread.start()
     
     def on_key_press_event(self, widget, event):
         # Enter key value
