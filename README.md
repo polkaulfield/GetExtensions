@@ -4,6 +4,8 @@ It can search from the website, get the lastest extension compatible with your G
 
 It's in beta state but everything works so far. 
 
-Dependencies: os, requests, json, lxml, subprocess, zipfile, shutil, gi
+TODO: Add support for selecting older version, enabling/disabling extensions,improve the UI and compile AppImage.
+
+Dependencies: os, threading, requests, json, lxml, subprocess, zipfile, shutil, gi
 
 ![Alt text](preview.png?raw=true "Preview")
