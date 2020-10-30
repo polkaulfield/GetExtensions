@@ -108,10 +108,16 @@ class MainWindow(Gtk.Window):
 
             # Download the image into a buffer and render it with pixbuf
             img_buffer = self.extmgr.get_image(self.extmgr.get_uuid(index))
-            img_buffer = Gio.MemoryInputStream.new_from_data(img_buffer, None)
-            pixbuf = Pixbuf.new_from_stream(img_buffer, None)
-            pixbuf = pixbuf.scale_simple(32, 32, InterpType.BILINEAR)
+            
+            # Check if the extension icon is local (faster searching)
+            if img_buffer == None:
+                pixbuf = Pixbuf.new_from_file("plugin.png")
+            else:
+                img_buffer = Gio.MemoryInputStream.new_from_data(img_buffer, None)
+                pixbuf = Pixbuf.new_from_stream(img_buffer, None)
+                pixbuf = pixbuf.scale_simple(32, 32, InterpType.BILINEAR)
 
+            # Create the label image
             img = Gtk.Image()
             img.set_from_pixbuf(pixbuf)
             img.set_halign(1)

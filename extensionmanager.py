@@ -81,7 +81,10 @@ class ExtensionManager():
         self.installed = self.list_extensions()
     
     def get_image(self, uuid):
-        response = self.get_request("https://extensions.gnome.org" + self.results[self.get_index(uuid)]["icon"])
+        url = "https://extensions.gnome.org" + self.results[self.get_index(uuid)]["icon"]
+        if url == "https://extensions.gnome.org/static/images/plugin.png":
+            return None
+        response = self.get_request(url)
         if response == None:
             return 1
         return response.content
