@@ -19,11 +19,18 @@ class ExtensionManager():
     def search(self, query):
         response = self.get_request("https://extensions.gnome.org/extension-query/?page=1&search=" + query)
         self.results = json.loads(response.text)["extensions"]
+        if response == None:
+            return 1
+        else:
+            return 0
 
     def get_extensions(self, uuid):
         # Parse the extension webpage and get the json from the data-svm element
         url = "https://extensions.gnome.org" + self.results[self.get_index(uuid)]["link"]
         response = self.get_request(url)
+        if response == None:
+            return 1
+
         root = lxml.html.fromstring(response.text)
         content = root.xpath("/html/body/div[2]/div/div[2]/@data-svm")[0]
         releases = json.loads(content)
@@ -58,10 +65,13 @@ class ExtensionManager():
         return self.results[index]["uuid"]
 
     def download(self, url, uuid):
-        response = get_request(url)
-        with open(uuid + ".zip", "wb") as file:
+        response = self.get_request(url)
+        if response == None:
+            return 1
+        with open(self.get_zip_path(uuid), "wb") as file:
             file.write(response.content)
         print("Downloaded " + uuid)
+        return 0
     
     def remove(self, uuid):
         install_path = self.extensions_path + uuid
@@ -72,25 +82,35 @@ class ExtensionManager():
     
     def get_image(self, uuid):
         response = self.get_request("https://extensions.gnome.org" + self.results[self.get_index(uuid)]["icon"])
+        if response == None:
+            return 1
         return response.content
     
     def get_request(self, url):
         try:
-            return requests.get(url)
+            response = requests.get(url)
+            return response
+
         except requests.ConnectionError:
             print("[!] Cannot request " + url)
-            return None
+            return 1
     
+    def get_zip_path(self, uuid):
+        return "/tmp/" + uuid + ".zip"
+
     def install(self, uuid):
         # Remove old extension       
         self.remove(uuid)
+        zip_path = self.get_zip_path(uuid)
 
         # Create new folder with matching uuid and extract to it
         install_path = self.extensions_path + uuid
         os.mkdir(install_path)
-        with zipfile.ZipFile(uuid + ".zip","r") as zip_ref:
+        with zipfile.ZipFile(zip_path,"r") as zip_ref:
             zip_ref.extractall(install_path)
+        os.remove(zip_path)
         self.installed = self.list_extensions()
+
         print("Installed " + uuid)
 
 

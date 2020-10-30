@@ -90,8 +90,15 @@ class MainWindow(Gtk.Window):
         self.listbox2.show_all()
         self.show_all()
     
+    def show_error(self, message):
+
+        # TODO error box
+        print(message)
+
     def search_from_entry(self):
-        self.extmgr.search(self.entry.get_text())
+        if self.extmgr.search(self.entry.get_text()) == 1:
+            self.show_error("Couldn't fetch the extensions list.")
+        
         for index, result in enumerate(self.extmgr.results):
 
             # Create a box for each item
@@ -115,8 +122,8 @@ class MainWindow(Gtk.Window):
             listboxrow = Gtk.ListBoxRow()
             listboxrow.add(resultbox)
             self.listbox1.add(listboxrow)
-            self.listbox1.show_all()
-            self.show_all()
+        self.listbox1.show_all()
+        self.show_all()
         
         # Reenable search button
         self.searchbutton.set_sensitive(True)
