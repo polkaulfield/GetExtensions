@@ -114,7 +114,7 @@ class MainWindow(Gtk.Window):
             itembox = Gtk.HBox()
             name_label = Gtk.Label()
 
-            # Check if the extension name is longer than 20 chars and trim it
+            # Check if the extension name is longer than 30 chars and trim it
             num = 30
             if len(item["name"]) >= num:
                 name_label.set_text(str=item["name"][:num] + "...")
@@ -240,11 +240,15 @@ class MainWindow(Gtk.Window):
         self.installbutton.set_sensitive(True)
     
     def on_listbox2_row_selected(self, widget, row):
-        id = self.listbox2.get_selected_row().get_index()
-        if self.extmgr.installed[id]["local"]:
-            self.removebutton.set_sensitive(True)
+        selected_row = self.listbox2.get_selected_row()
+        if selected_row == None:
+            return
         else:
-            self.removebutton.set_sensitive(False)
+            id = selected_row.get_index()
+            if self.extmgr.installed[id]["local"]:
+                self.removebutton.set_sensitive(True)
+            else:
+                self.removebutton.set_sensitive(False)
 
 win = MainWindow()
 win.connect("destroy", Gtk.main_quit)
