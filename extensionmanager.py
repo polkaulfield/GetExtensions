@@ -48,7 +48,6 @@ class ExtensionManager():
         except FileNotFoundError:
             os.mkdir(self.extensions_local_path)
             return os.listdir(self.extensions_local_path)
-        print(os.listdir(self.extensions_local_path))
 
     def search(self, query):
         response = self.get_request("https://extensions.gnome.org/extension-query/?page=1&search=" + query)

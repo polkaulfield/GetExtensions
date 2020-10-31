@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 import gi, threading
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk
+from gi.repository import Gtk, GLib
 from gi.repository.GdkPixbuf import Pixbuf, InterpType
 from gi.repository import Gio
 
@@ -146,6 +146,9 @@ class MainWindow(Gtk.Window):
         # TODO error box
         print(message)
 
+    def search_worker(self):
+        GLib.idle_add(self.search_from_entry)
+
     def search_from_entry(self):
         self.listbox1.set_sensitive(False)
         if self.extmgr.search(self.entry.get_text()) == 1:
@@ -203,7 +206,8 @@ class MainWindow(Gtk.Window):
         self.installbutton.set_sensitive(False)
 
         # Start thread to add results
-        self.search_thread = threading.Thread(target=self.search_from_entry)
+
+        self.search_thread = threading.Thread(target=self.search_worker)
         self.search_thread.start()
 
     def on_switch_activated(self, switch, gparam, name):
