@@ -13,22 +13,31 @@ class ExtensionManager():
     def run_command(self, command):
         return subprocess.Popen(command, shell=True, stdout=subprocess.PIPE).stdout.read().decode()    
 
-
     def list_all_extensions(self):
         installed_extensions = []
         uuids = self.list_user_extensions() + self.list_system_extensions()
         enabled_extensions = re.findall(r'\'(.+?)\'', self.run_command("gsettings get org.gnome.shell enabled-extensions"))
         for uuid in uuids:
+            extension_local_path = self.extensions_local_path + uuid
+            extension_sys_path = self.extensions_sys_path + uuid
+
             extension_data = {"uuid": uuid, "local": self.extension_is_local(uuid)}
             if uuid in enabled_extensions:
                 extension_data["enabled"] = True
             else:
                 extension_data["enabled"] = False
             if extension_data["local"] == True:
-                metadata = open(self.extensions_local_path + uuid + "/metadata.json", "r").read()
+                metadata = open(extension_local_path + "/metadata.json", "r").read()
             else:
-                metadata = open(self.extensions_sys_path + uuid + "/metadata.json").read()
+                metadata = open(extension_sys_path + "/metadata.json").read()
             metadata = json.loads(metadata)
+
+            # Check for preferences
+            if os.path.exists(extension_sys_path + "/prefs.js") or os.path.exists(extension_local_path + "/prefs.js"):
+                extension_data["prefs"] = True
+            else:
+                extension_data["prefs"] = False
+
             extension_data["name"] = metadata["name"]
             installed_extensions.append(extension_data)
         return installed_extensions
@@ -68,21 +77,29 @@ class ExtensionManager():
         content = root.xpath("/html/body/div[2]/div/div[2]/@data-svm")[0]
         releases = json.loads(content)
 
+        print(releases)
+
         # Get matching version
         extension_id = ""
 
         # Iterate through the different releases and get the matching one for your gnome version and failsafe to the lastest release
         subversions = []
         for key, value in releases.items():
-            subversions.append(int(key[2:]))
-            if self.version.startswith(key):
+            subversions.append(float(key[2:]))
+            print("Float: " + str(float(key[2:])))
+            print("String " + key)
+            if self.version.startswith(str(key)):
                 extension_id = str(value["pk"])
         
         # If the ID doesn't start with your current version, get the highest one
         if extension_id == "":
             print(subversions)
             print(str(max(subversions)))
-            highest_version = "3." + str(max(subversions))
+
+            # Use re to remove .0 from the float conversion above
+            max_subversion = re.sub('\.0$', '', str(max(subversions)))
+            highest_version = "3." + max_subversion
+            print(releases)
             extension_id = str(releases[highest_version]["pk"])
 
         # Download and install

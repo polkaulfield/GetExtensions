@@ -109,31 +109,48 @@ class MainWindow(Gtk.Window):
         # Refresh installed extensions (todo with get property, kinda spaghetti now)
         self.extmgr.list_all_extensions()
 
+
         for item in self.extmgr.installed:            
             # Create a box for each item
             itembox = Gtk.HBox()
-            name_label = Gtk.Label()
 
-            # Check if the extension name is longer than 30 chars and trim it
+            # Create label
+            name_label = Gtk.Label()
+            name_label.set_halign(1)
+
+            # Check if the extension name is longer than 30 chars and trim it for label
             num = 30
             if len(item["name"]) >= num:
                 name_label.set_text(str=item["name"][:num] + "...")
             else:
                 name_label.set_text(str=item["name"])
 
-            name_label.set_halign(1)
-
+            # Create switch
             switch = Gtk.Switch()
+            switch.set_halign(0)
             switch.connect("notify::active", self.on_switch_activated, item["uuid"])
-            switch.set_halign(1)
+
             if item["enabled"] == True:
                 switch.set_active(True)
             else:
                 switch.set_active(False)
 
-            itembox.pack_start(switch, True, True, 0)
-            itembox.pack_end(name_label, True, True, 0)
+            # Pack everything to itembox
+            itembox.pack_start(switch, False, False, 0)
+            itembox.set_center_widget(name_label)
 
+            # Check if item has prefs before adding the button
+
+            if item["prefs"] == True:
+                config_button = Gtk.Button()
+                config_button.set_halign(1)
+                config_icon = Gtk.Image()
+                config_icon.set_from_icon_name(Gtk.STOCK_PREFERENCES, Gtk.IconSize.SMALL_TOOLBAR)
+                config_button.add(config_icon)
+                config_button.connect("clicked", self.on_config_button_clicked, item["uuid"])
+                itembox.pack_end(config_button, False, False, 0)
+
+            # Create the listbox row
             listboxrow = Gtk.ListBoxRow()
             listboxrow.add(itembox)
             self.listbox2.add(listboxrow)
@@ -146,21 +163,12 @@ class MainWindow(Gtk.Window):
         # TODO error box
         print(message)
 
-    def search_worker(self):
-        GLib.idle_add(self.search_from_entry)
-
-    def search_from_entry(self):
-        self.listbox1.set_sensitive(False)
-        if self.extmgr.search(self.entry.get_text()) == 1:
-            self.show_error("Couldn't fetch the extensions list.")
+    def search_worker(self, query):
+        if self.extmgr.search(query) == 1:
+            # error
+            return
         
         for index, result in enumerate(self.extmgr.results):
-
-            # Create a box for each item
-            resultbox = Gtk.HBox()
-            name_label = Gtk.Label(label=result["name"])
-            name_label.set_halign(1)
-
             # Download the image into a buffer and render it with pixbuf
             img_buffer = self.extmgr.get_image(self.extmgr.get_uuid(index))
             
@@ -171,10 +179,23 @@ class MainWindow(Gtk.Window):
                 img_buffer = Gio.MemoryInputStream.new_from_data(img_buffer, None)
                 pixbuf = Pixbuf.new_from_stream(img_buffer, None)
                 pixbuf = pixbuf.scale_simple(32, 32, InterpType.BILINEAR)
+            self.extmgr.results[index]["pixbuf"] = pixbuf
+        GLib.idle_add(self.display_search_results)
+        return
+
+    def display_search_results(self):
+        self.search_thread.join()
+        self.listbox1.set_sensitive(False)
+        for index, result in enumerate(self.extmgr.results):
+
+            # Create a box for each item
+            resultbox = Gtk.HBox()
+            name_label = Gtk.Label(label=result["name"])
+            name_label.set_halign(1)
 
             # Create the label image
             img = Gtk.Image()
-            img.set_from_pixbuf(pixbuf)
+            img.set_from_pixbuf(result["pixbuf"])
             img.set_halign(1)
 
             resultbox.pack_start(img, True, True, 0)
@@ -206,8 +227,8 @@ class MainWindow(Gtk.Window):
         self.installbutton.set_sensitive(False)
 
         # Start thread to add results
-
-        self.search_thread = threading.Thread(target=self.search_worker)
+        query = self.entry.get_text()
+        self.search_thread = threading.Thread(target=self.search_worker, args=(query,))
         self.search_thread.start()
 
     def on_switch_activated(self, switch, gparam, name):
@@ -253,6 +274,10 @@ class MainWindow(Gtk.Window):
                 self.removebutton.set_sensitive(True)
             else:
                 self.removebutton.set_sensitive(False)
+    
+    def on_config_button_clicked(self, widget, uuid):
+        self.extmgr.run_command("gnome-extensions prefs " + uuid)
+        return
 
 win = MainWindow()
 win.connect("destroy", Gtk.main_quit)
