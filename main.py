@@ -127,7 +127,9 @@ class MainWindow(Gtk.Window):
 
             # Create switch
             switch = Gtk.Switch()
-            switch.set_halign(0)
+            fixed_switch = Gtk.Fixed()
+            fixed_switch.put(switch, 0, 0)
+            fixed_switch.set_valign(3)
             switch.connect("notify::active", self.on_switch_activated, item["uuid"])
 
             if item["enabled"] == True:
@@ -136,7 +138,7 @@ class MainWindow(Gtk.Window):
                 switch.set_active(False)
 
             # Pack everything to itembox
-            itembox.pack_start(switch, False, False, 0)
+            itembox.pack_start(fixed_switch, False, True, 0)
             itembox.set_center_widget(name_label)
 
             # Check if item has prefs before adding the button
