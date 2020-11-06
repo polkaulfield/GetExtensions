@@ -59,25 +59,26 @@ class ExtensionManager():
             return os.listdir(self.extensions_local_path)
 
     def search(self, query):
-        response = self.get_request("https://extensions.gnome.org/extension-query/?page=1&search=" + query)
+        try:
+            response = self.get_request("https://extensions.gnome.org/extension-query/?page=1&search=" + query)
+        except:
+            raise
+            return        
         self.results = json.loads(response.text)["extensions"]
-        if response == None:
-            return 1
-        else:
-            return 0
+        return
 
     def get_extensions(self, uuid):
         # Parse the extension webpage and get the json from the data-svm element
         url = "https://extensions.gnome.org" + self.results[self.get_index(uuid)]["link"]
-        response = self.get_request(url)
-        if response == None:
-            return 1
+        try:
+            response = self.get_request(url)
+        except:
+            raise
+            return
 
         root = lxml.html.fromstring(response.text)
         content = root.xpath("/html/body/div[2]/div/div[2]/@data-svm")[0]
         releases = json.loads(content)
-
-        print(releases)
 
         # Get matching version
         extension_id = ""
@@ -86,25 +87,25 @@ class ExtensionManager():
         subversions = []
         for key, value in releases.items():
             subversions.append(float(key[2:]))
-            print("Float: " + str(float(key[2:])))
-            print("String " + key)
+
             if self.version.startswith(str(key)):
                 extension_id = str(value["pk"])
         
         # If the ID doesn't start with your current version, get the highest one
         if extension_id == "":
-            print(subversions)
-            print(str(max(subversions)))
 
             # Use re to remove .0 from the float conversion above
             max_subversion = re.sub('\.0$', '', str(max(subversions)))
             highest_version = "3." + max_subversion
-            print(releases)
             extension_id = str(releases[highest_version]["pk"])
 
         # Download and install
-        self.download("https://extensions.gnome.org/download-extension/" + uuid + ".shell-extension.zip?version_tag=" + extension_id, uuid)
-        self.install(uuid)
+        try:
+            self.download("https://extensions.gnome.org/download-extension/" + uuid + ".shell-extension.zip?version_tag=" + extension_id, uuid)
+            self.install(uuid)
+        except:
+            raise
+        return
 
     def get_index(self, uuid):
         for index, entry in enumerate(self.results):
@@ -115,38 +116,43 @@ class ExtensionManager():
         return self.results[index]["uuid"]
 
     def download(self, url, uuid):
-        response = self.get_request(url)
-        if response == None:
-            return 1
-        with open(self.get_zip_path(uuid), "wb") as file:
-            file.write(response.content)
-        print("Downloaded " + uuid)
-        return 0
-    
+        try:
+            response = self.get_request(url)
+            with open(self.get_zip_path(uuid), "wb") as file:
+                file.write(response.content)
+                print("Downloaded " + uuid)
+        except:
+            raise
+        return
+
     def remove(self, uuid):
         install_path = self.extensions_local_path + uuid
         if os.path.isdir(install_path):
             print("Deleting " + uuid)
-            shutil.rmtree(install_path)
+            try:
+                shutil.rmtree(install_path)
+            except:
+                raise
         self.installed = self.list_all_extensions()
+        return
     
     def get_image(self, uuid):
         url = "https://extensions.gnome.org" + self.results[self.get_index(uuid)]["icon"]
         if url == "https://extensions.gnome.org/static/images/plugin.png":
             return None
-        response = self.get_request(url)
-        if response == None:
-            return 1
-        return response.content
+        try:
+            response = self.get_request(url)
+            return response.content
+        except:
+            raise
+        return
     
     def get_request(self, url):
-        try:
-            response = requests.get(url)
-            return response
-
-        except requests.ConnectionError:
-            print("[!] Cannot request " + url)
-            return 1
+        response = requests.get(url)
+        if response == None:
+            raise
+            return
+        return response
     
     def set_extension_status(self, uuid, status):
         self.run_command("gnome-extensions " + status + " " + uuid)
@@ -162,13 +168,17 @@ class ExtensionManager():
 
         # Create new folder with matching uuid and extract to it
         install_path = self.extensions_local_path + uuid
-        os.mkdir(install_path)
-        with zipfile.ZipFile(zip_path,"r") as zip_ref:
-            zip_ref.extractall(install_path)
-        os.remove(zip_path)
-        self.installed = self.list_all_extensions()
 
+        try:
+            os.mkdir(install_path)
+            with zipfile.ZipFile(zip_path,"r") as zip_ref:
+                zip_ref.extractall(install_path)
+            os.remove(zip_path)
+            self.installed = self.list_all_extensions()
+        except:
+            raise
         print("Installed " + uuid)
+        return
 
 
 

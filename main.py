@@ -1,9 +1,8 @@
 #!/usr/bin/python3
 import gi, threading
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk, GLib
+from gi.repository import Gtk, GLib, Gio, Gdk
 from gi.repository.GdkPixbuf import Pixbuf, InterpType
-from gi.repository import Gio
 
 # Local modules
 import extensionmanager
@@ -109,7 +108,6 @@ class MainWindow(Gtk.Window):
         # Refresh installed extensions (todo with get property, kinda spaghetti now)
         self.extmgr.list_all_extensions()
 
-
         for item in self.extmgr.installed:            
             # Create a box for each item
             itembox = Gtk.HBox()
@@ -161,18 +159,35 @@ class MainWindow(Gtk.Window):
         self.listbox2.show_all()
         self.show_all()
     
-    def show_error(self, message):
-        # TODO error box
-        print(message)
+    def show_error(self, error_message):
+        dialog = Gtk.MessageDialog(
+            transient_for=self,
+            flags=0,
+            message_type=Gtk.MessageType.ERROR,
+            buttons=Gtk.ButtonsType.CANCEL,
+            text="Error!",
+        )
+        dialog.format_secondary_text(str(error_message))
+        dialog.run()
+        dialog.destroy()
+        return
 
     def search_worker(self, query):
-        if self.extmgr.search(query) == 1:
-            # error
+        try:
+            self.extmgr.search(query)
+        except Exception as error:
+            GLib.idle_add(self.show_error, error)
+            GLib.idle_add(self.restore_search_button)
             return
         
         for index, result in enumerate(self.extmgr.results):
             # Download the image into a buffer and render it with pixbuf
-            img_buffer = self.extmgr.get_image(self.extmgr.get_uuid(index))
+            try:
+                img_buffer = self.extmgr.get_image(self.extmgr.get_uuid(index))
+            except Exception as error:
+                GLib.idle_add(self.show_error, error)
+                GLib.idle_add(self.restore_search_button)
+                return
             
             # Check if the extension icon is local (faster searching)
             if img_buffer == None:
@@ -183,6 +198,11 @@ class MainWindow(Gtk.Window):
                 pixbuf = pixbuf.scale_simple(32, 32, InterpType.BILINEAR)
             self.extmgr.results[index]["pixbuf"] = pixbuf
         GLib.idle_add(self.display_search_results)
+        return
+    
+    def restore_search_button(self):
+        self.searchbutton.set_sensitive(True)
+        self.searchbutton.set_label("Search!")
         return
 
     def display_search_results(self):
@@ -212,12 +232,11 @@ class MainWindow(Gtk.Window):
         
         # Reenable search button
         self.listbox1.set_sensitive(True)
-        self.searchbutton.set_sensitive(True)
-        self.searchbutton.set_label("Search!")
+        self.restore_search_button()
         return
 
     def show_results(self):
-        # Disable search button while searching
+        # Disable search button
         self.searchbutton.set_sensitive(False)
         self.searchbutton.set_label("Searching...")
 
@@ -242,8 +261,7 @@ class MainWindow(Gtk.Window):
             print(name + " disabled")
     
     def on_key_press_event(self, widget, event):
-        # Enter key value
-        if event.keyval == 65293:
+        if event.keyval == Gdk.KEY_Return:
             self.show_results()
 
     def on_searchbutton_clicked(self, widget):
@@ -252,14 +270,25 @@ class MainWindow(Gtk.Window):
     def on_installbutton_clicked(self, widget):
         self.installbutton.set_sensitive(False)
         id = self.listbox1.get_selected_row().get_index()
-        self.extmgr.get_extensions(self.extmgr.results[id]["uuid"])
+        try:
+            self.extmgr.get_extensions(self.extmgr.results[id]["uuid"])
+        except Exception as error:
+            self.show_error(error)
+            return
+
         self.installbutton.set_sensitive(True)
         self.show_installed_extensions()
+        return
     
     def on_removebutton_clicked(self, widget):
         self.removebutton.set_sensitive(False)
         id = self.listbox2.get_selected_row().get_index()
-        self.extmgr.remove(self.extmgr.installed[id]["uuid"])
+        try:
+            self.extmgr.remove(self.extmgr.installed[id]["uuid"])
+        except Exception as error:
+            self.show_error(error)
+            return
+
         self.removebutton.set_sensitive(True)
         self.show_installed_extensions()
     
