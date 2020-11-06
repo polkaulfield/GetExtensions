@@ -1,11 +1,8 @@
 #!/usr/bin/python3
-import gi, threading
+import os, gi, threading, extensionmanager
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, GLib, Gio, Gdk
 from gi.repository.GdkPixbuf import Pixbuf, InterpType
-
-# Local modules
-import extensionmanager
 
 class ListBoxRowWithData(Gtk.ListBoxRow):
     def __init__(self, data):
@@ -191,7 +188,7 @@ class MainWindow(Gtk.Window):
             
             # Check if the extension icon is local (faster searching)
             if img_buffer == None:
-                pixbuf = Pixbuf.new_from_file("plugin.png")
+                pixbuf = Pixbuf.new_from_file(os.path.join(os.path.dirname(__file__), "plugin.png"))
             else:
                 img_buffer = Gio.MemoryInputStream.new_from_data(img_buffer, None)
                 pixbuf = Pixbuf.new_from_stream(img_buffer, None)
