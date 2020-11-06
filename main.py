@@ -110,7 +110,7 @@ class MainWindow(Gtk.Window):
 
         for item in self.extmgr.installed:            
             # Create a box for each item
-            itembox = Gtk.HBox()
+            itembox = Gtk.Box()
 
             # Create label
             name_label = Gtk.Label()
@@ -211,7 +211,7 @@ class MainWindow(Gtk.Window):
         for index, result in enumerate(self.extmgr.results):
 
             # Create a box for each item
-            resultbox = Gtk.HBox()
+            resultbox = Gtk.Box()
             name_label = Gtk.Label(label=result["name"])
             name_label.set_halign(1)
 
