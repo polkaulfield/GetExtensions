@@ -4,8 +4,10 @@ It can search from the website, get the lastest extension compatible with your G
 
 For installation run:
 
+```
 git clone https://github.com/ekistece/GetExtensions.git
 cd GetExtensions
 python3 setup.py install --user
+```
 
 ![Alt text](preview.png?raw=true "Preview")
