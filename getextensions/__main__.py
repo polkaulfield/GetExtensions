@@ -170,6 +170,18 @@ class MainWindow(Gtk.Window):
         dialog.run()
         dialog.destroy()
 
+    def show_sucess(self, message):
+        dialog = Gtk.MessageDialog(
+            transient_for=self,
+            flags = 0,
+            message_type=Gtk.MessageType.INFO,
+            buttons=Gtk.ButtonsType.OK,
+            text="Success!"
+        )
+        dialog.format_secondary_text(str(message))
+        dialog.run()
+        dialog.destroy()
+
     def search_worker(self, query):
         try:
             self.extmgr.search(query)
@@ -265,6 +277,7 @@ class MainWindow(Gtk.Window):
         id = self.listbox1.get_selected_row().get_index()
         try:
             self.extmgr.get_extensions(self.extmgr.results[id]["uuid"])
+            self.show_sucess("Installed successfully!")
         except Exception as error:
             self.show_error(error)
             return
@@ -300,6 +313,7 @@ class MainWindow(Gtk.Window):
 
     def on_config_button_clicked(self, widget, uuid):
         self.extmgr.run_command("gnome-extensions prefs " + uuid)
+
 
 if __name__ == "__main__":
     win = MainWindow()

@@ -9,9 +9,9 @@ class ExtensionManager():
         self.results = []
         self.installed = self.list_all_extensions()
         self.version = self.run_command("gnome-shell --version").split()[2]
-    
+
     def run_command(self, command):
-        return subprocess.Popen(command, shell=True, stdout=subprocess.PIPE).stdout.read().decode()    
+        return subprocess.Popen(command, shell=True, stdout=subprocess.PIPE).stdout.read().decode()
 
     def list_all_extensions(self):
         installed_extensions = []
@@ -41,7 +41,7 @@ class ExtensionManager():
             extension_data["name"] = metadata["name"]
             installed_extensions.append(extension_data)
         return installed_extensions
-    
+
     def extension_is_local(self, uuid):
         if uuid in self.list_user_extensions():
             return True
@@ -63,7 +63,7 @@ class ExtensionManager():
             response = self.get_request("https://extensions.gnome.org/extension-query/?page=1&search=" + query)
         except:
             raise
-            return        
+            return
         self.results = json.loads(response.text)["extensions"]
 
     def get_extensions(self, uuid):
@@ -88,7 +88,7 @@ class ExtensionManager():
 
             if self.version.startswith(str(key)):
                 extension_id = str(value["pk"])
-        
+
         # If the ID doesn't start with your current version, get the highest one
         if extension_id == "":
 
@@ -108,7 +108,7 @@ class ExtensionManager():
         for index, entry in enumerate(self.results):
             if entry["uuid"] == uuid:
                 return index
-    
+
     def get_uuid(self, index):
         return self.results[index]["uuid"]
 
@@ -130,7 +130,7 @@ class ExtensionManager():
             except:
                 raise
         self.installed = self.list_all_extensions()
-    
+
     def get_image(self, uuid):
         url = "https://extensions.gnome.org" + self.results[self.get_index(uuid)]["icon"]
         if url == "https://extensions.gnome.org/static/images/plugin.png":
@@ -140,22 +140,21 @@ class ExtensionManager():
             return response.content
         except:
             raise
-    
+
     def get_request(self, url):
         response = requests.get(url)
         if response == None:
-            raise
-            return
+            raise requests.RequestException(f"Can not get {url}")
         return response
-    
+
     def set_extension_status(self, uuid, status):
         self.run_command("gnome-extensions " + status + " " + uuid)
-    
+
     def get_zip_path(self, uuid):
         return "/tmp/" + uuid + ".zip"
 
     def install(self, uuid):
-        # Remove old extension       
+        # Remove old extension
         self.remove(uuid)
         zip_path = self.get_zip_path(uuid)
 
@@ -169,7 +168,7 @@ class ExtensionManager():
             os.remove(zip_path)
             self.installed = self.list_all_extensions()
             print("Installed " + uuid)
-            
+
         except:
             raise
 
