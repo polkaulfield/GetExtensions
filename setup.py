@@ -12,6 +12,8 @@ setup(name='getextensions',
       package_data={'getextensions': ['plugin.png']},
       include_package_data=True,
       data_files=[
-        ('share/applications', ['data/org.getextensions.desktop']),
-    ],
+        ('share/applications', ['data/org.getextensions.desktop'])],
+      install_requires=[
+          'requests', 'lxml',
+      ],
 )
