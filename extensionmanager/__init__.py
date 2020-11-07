@@ -65,7 +65,6 @@ class ExtensionManager():
             raise
             return        
         self.results = json.loads(response.text)["extensions"]
-        return
 
     def get_extensions(self, uuid):
         # Parse the extension webpage and get the json from the data-svm element
@@ -74,7 +73,6 @@ class ExtensionManager():
             response = self.get_request(url)
         except:
             raise
-            return
 
         root = lxml.html.fromstring(response.text)
         content = root.xpath("/html/body/div[2]/div/div[2]/@data-svm")[0]
@@ -105,7 +103,6 @@ class ExtensionManager():
             self.install(uuid)
         except:
             raise
-        return
 
     def get_index(self, uuid):
         for index, entry in enumerate(self.results):
@@ -123,7 +120,6 @@ class ExtensionManager():
                 print("Downloaded " + uuid)
         except:
             raise
-        return
 
     def remove(self, uuid):
         install_path = self.extensions_local_path + uuid
@@ -134,7 +130,6 @@ class ExtensionManager():
             except:
                 raise
         self.installed = self.list_all_extensions()
-        return
     
     def get_image(self, uuid):
         url = "https://extensions.gnome.org" + self.results[self.get_index(uuid)]["icon"]
@@ -145,7 +140,6 @@ class ExtensionManager():
             return response.content
         except:
             raise
-        return
     
     def get_request(self, url):
         response = requests.get(url)
@@ -156,7 +150,6 @@ class ExtensionManager():
     
     def set_extension_status(self, uuid, status):
         self.run_command("gnome-extensions " + status + " " + uuid)
-        return
     
     def get_zip_path(self, uuid):
         return "/tmp/" + uuid + ".zip"
@@ -175,10 +168,10 @@ class ExtensionManager():
                 zip_ref.extractall(install_path)
             os.remove(zip_path)
             self.installed = self.list_all_extensions()
+            print("Installed " + uuid)
+            
         except:
             raise
-        print("Installed " + uuid)
-        return
 
 
 

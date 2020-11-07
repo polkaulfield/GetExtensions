@@ -2,8 +2,9 @@
 Version=1.0
 Type=Application
 Name=Get Extensions
+StartupWMClass=Get Extensions
 Comment=GNOME app to download and manage extensions
 Icon=org.gnome.Shell.Extensions-symbolic
-Exec=python3 -m getextensions.__main__
+Exec=python3 -m getextensions
 Actions=
 Categories=X-GNOME-Other;

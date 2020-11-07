@@ -13,6 +13,7 @@ class ListBoxRowWithData(Gtk.ListBoxRow):
 class MainWindow(Gtk.Window):
     def __init__(self):
         Gtk.Window.__init__(self, title="Get Extensions")
+        GLib.set_prgname("Get Extensions")
         self.connect("destroy", Gtk.main_quit)
 
         # Create Headerbar
@@ -45,6 +46,7 @@ class MainWindow(Gtk.Window):
 
         # Create tabs
         self.notebook = Gtk.Notebook()
+        self.notebook.set_halign(Gtk.Align.CENTER)
         self.add(self.notebook)
 
         # Define grid1 and set layout
@@ -105,13 +107,13 @@ class MainWindow(Gtk.Window):
         # Refresh installed extensions (todo with get property, kinda spaghetti now)
         self.extmgr.list_all_extensions()
 
-        for item in self.extmgr.installed:            
+        for item in self.extmgr.installed:
             # Create a box for each item
             itembox = Gtk.Box()
 
             # Create label
             name_label = Gtk.Label()
-            name_label.set_halign(1)
+            name_label.set_halign(Gtk.Align.START)
 
             # Check if the extension name is longer than 30 chars and trim it for label
             num = 30
@@ -124,7 +126,7 @@ class MainWindow(Gtk.Window):
             switch = Gtk.Switch()
             fixed_switch = Gtk.Fixed()
             fixed_switch.put(switch, 0, 0)
-            fixed_switch.set_valign(3)
+            fixed_switch.set_valign(Gtk.Align.CENTER)
             switch.connect("notify::active", self.on_switch_activated, item["uuid"])
 
             if item["enabled"] == True:
@@ -140,7 +142,7 @@ class MainWindow(Gtk.Window):
 
             if item["prefs"] == True:
                 config_button = Gtk.Button()
-                config_button.set_halign(1)
+                config_button.set_halign(Gtk.Align.START)
                 config_icon = Gtk.Image()
                 config_icon.set_from_icon_name(Gtk.STOCK_PREFERENCES, Gtk.IconSize.SMALL_TOOLBAR)
                 config_button.add(config_icon)
@@ -155,7 +157,7 @@ class MainWindow(Gtk.Window):
         # Display after refresh
         self.listbox2.show_all()
         self.show_all()
-    
+
     def show_error(self, error_message):
         dialog = Gtk.MessageDialog(
             transient_for=self,
@@ -167,7 +169,6 @@ class MainWindow(Gtk.Window):
         dialog.format_secondary_text(str(error_message))
         dialog.run()
         dialog.destroy()
-        return
 
     def search_worker(self, query):
         try:
@@ -175,8 +176,7 @@ class MainWindow(Gtk.Window):
         except Exception as error:
             GLib.idle_add(self.show_error, error)
             GLib.idle_add(self.restore_search_button)
-            return
-        
+
         for index, result in enumerate(self.extmgr.results):
             # Download the image into a buffer and render it with pixbuf
             try:
@@ -184,8 +184,7 @@ class MainWindow(Gtk.Window):
             except Exception as error:
                 GLib.idle_add(self.show_error, error)
                 GLib.idle_add(self.restore_search_button)
-                return
-            
+
             # Check if the extension icon is local (faster searching)
             if img_buffer == None:
                 pixbuf = Pixbuf.new_from_file(os.path.join(os.path.dirname(__file__), "plugin.png"))
@@ -195,12 +194,10 @@ class MainWindow(Gtk.Window):
                 pixbuf = pixbuf.scale_simple(32, 32, InterpType.BILINEAR)
             self.extmgr.results[index]["pixbuf"] = pixbuf
         GLib.idle_add(self.display_search_results)
-        return
-    
+
     def restore_search_button(self):
         self.searchbutton.set_sensitive(True)
         self.searchbutton.set_label("Search!")
-        return
 
     def display_search_results(self):
         self.search_thread.join()
@@ -210,12 +207,12 @@ class MainWindow(Gtk.Window):
             # Create a box for each item
             resultbox = Gtk.Box()
             name_label = Gtk.Label(label=result["name"])
-            name_label.set_halign(1)
+            name_label.set_halign(Gtk.Align.START)
 
             # Create the label image
             img = Gtk.Image()
             img.set_from_pixbuf(result["pixbuf"])
-            img.set_halign(1)
+            img.set_halign(Gtk.Align.START)
 
             resultbox.pack_start(img, True, True, 0)
             resultbox.pack_end(name_label, True, True, 0)
@@ -226,11 +223,10 @@ class MainWindow(Gtk.Window):
 
         self.listbox1.show_all()
         self.show_all()
-        
+
         # Reenable search button
         self.listbox1.set_sensitive(True)
         self.restore_search_button()
-        return
 
     def show_results(self):
         # Disable search button
@@ -240,7 +236,7 @@ class MainWindow(Gtk.Window):
         # Clear old entries
         for entry in self.listbox1.get_children():
             self.listbox1.remove(entry)
-        
+
         # Disable install button until you have something selected
         self.installbutton.set_sensitive(False)
 
@@ -256,7 +252,7 @@ class MainWindow(Gtk.Window):
         else:
             self.extmgr.set_extension_status(name, "disable")
             print(name + " disabled")
-    
+
     def on_key_press_event(self, widget, event):
         if event.keyval == Gdk.KEY_Return:
             self.show_results()
@@ -275,8 +271,7 @@ class MainWindow(Gtk.Window):
 
         self.installbutton.set_sensitive(True)
         self.show_installed_extensions()
-        return
-    
+
     def on_removebutton_clicked(self, widget):
         self.removebutton.set_sensitive(False)
         id = self.listbox2.get_selected_row().get_index()
@@ -288,10 +283,10 @@ class MainWindow(Gtk.Window):
 
         self.removebutton.set_sensitive(True)
         self.show_installed_extensions()
-    
+
     def on_listbox1_row_selected(self, widget, row):
         self.installbutton.set_sensitive(True)
-    
+
     def on_listbox2_row_selected(self, widget, row):
         selected_row = self.listbox2.get_selected_row()
         if selected_row == None:
@@ -302,12 +297,11 @@ class MainWindow(Gtk.Window):
                 self.removebutton.set_sensitive(True)
             else:
                 self.removebutton.set_sensitive(False)
-    
+
     def on_config_button_clicked(self, widget, uuid):
         self.extmgr.run_command("gnome-extensions prefs " + uuid)
-        return
 
-win = MainWindow()
-win.connect("destroy", Gtk.main_quit)
-win.show_all()
-Gtk.main()
+if __name__ == "__main__":
+    win = MainWindow()
+    win.show_all()
+    Gtk.main()
