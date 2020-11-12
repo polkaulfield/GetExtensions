@@ -1,14 +1,30 @@
 #!/usr/bin/python3
 import os, requests, json, lxml.html, subprocess, zipfile, shutil, re
 
+class Extension:
+    def __init__(self, *args, **kwargs):
+        for dictionary in args:
+            for key in dictionary:
+                setattr(self, key.replace('-', '_'), dictionary[key])
+        for key in kwargs:
+            setattr(self, key.replace('-', '_'), kwargs[key])
+
+    def __repr__(self):
+        return f"Extension: {self.name}, {self.uuid}"
+
+    def ext_print(self):
+        [print(f"{property}: {value}") for property, value in vars(self).items()]
+
 class ExtensionManager():
 
     def __init__(self):
         self.extensions_local_path = os.getenv("HOME") + "/.local/share/gnome-shell/extensions/"
         self.extensions_sys_path = "/usr/share/gnome-shell/extensions/"
         self.results = []
+        self.installed_extensions = []
         self.installed = self.list_all_extensions()
         self.version = self.run_command("gnome-shell --version").split()[2]
+
 
     def run_command(self, command):
         return subprocess.Popen(command, shell=True, stdout=subprocess.PIPE).stdout.read().decode()
@@ -39,8 +55,12 @@ class ExtensionManager():
                 extension_data["prefs"] = False
 
             extension_data["name"] = metadata["name"]
-            installed_extensions.append(extension_data)
+            extension_data.update(metadata)
+            self.installed_extensions.append(Extension(**extension_data))
         return installed_extensions
+
+    def reload_installed_extensions(self):
+        self.installed = self.list_all_extensions()
 
     def extension_is_local(self, uuid):
         if uuid in self.list_user_extensions():

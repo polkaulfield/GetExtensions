@@ -4,6 +4,8 @@ gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, GLib, Gio, Gdk
 from gi.repository.GdkPixbuf import Pixbuf, InterpType
 
+from loguru import logger
+
 class ListBoxRowWithData(Gtk.ListBoxRow):
     def __init__(self, data):
         super(Gtk.ListBoxRow, self).__init__()
@@ -277,7 +279,7 @@ class MainWindow(Gtk.Window):
         id = self.listbox1.get_selected_row().get_index()
         try:
             self.extmgr.get_extensions(self.extmgr.results[id]["uuid"])
-            self.show_sucess("Installed successfully!")
+            self.show_sucess(f"{self.extmgr.results[id]['name']} Installed successfully!")
         except Exception as error:
             self.show_error(error)
             return
@@ -288,11 +290,14 @@ class MainWindow(Gtk.Window):
     def on_removebutton_clicked(self, widget):
         self.removebutton.set_sensitive(False)
         id = self.listbox2.get_selected_row().get_index()
+        name = self.extmgr.installed[id]["name"]
         try:
             self.extmgr.remove(self.extmgr.installed[id]["uuid"])
+            # self.show_sucess(f"{self.extmgr.results[id]['name']} successfully removed!")
         except Exception as error:
             self.show_error(error)
             return
+        self.show_sucess(f"{name} successfully removed!")
 
         self.removebutton.set_sensitive(True)
         self.show_installed_extensions()
