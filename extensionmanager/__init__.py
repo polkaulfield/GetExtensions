@@ -3,23 +3,73 @@ import os, requests, json, lxml.html, subprocess, zipfile, shutil, re
 
 class Extension:
     def __init__(self, *args, **kwargs):
+        """ Gnome Shell Extension class.
+            Implements structure for extension metadata
+        """
+        # Create instance from provided JSON from web or from metadata.json
+        # Some keys should be co
         for dictionary in args:
             for key in dictionary:
                 setattr(self, key.replace('-', '_'), dictionary[key])
         for key in kwargs:
             setattr(self, key.replace('-', '_'), kwargs[key])
 
+        if getattr(self, 'shell_version_map', None):
+            self.shell_version = [i for i in self.shell_version_map.keys()]
+
     def __repr__(self):
+        # Implemented for easier debug
         return f"Extension: {self.name}, {self.uuid}"
 
+    def __eq__(self, other):
+        # Implement Extension instance comparison.
+        # Extensions are equal if name and uuid are the same
+        if not isinstance(other, Extension):
+            return False
+        return self.name == other.name and self.uuid == other.uuid
+
     def ext_print(self):
+        # Implemented for easier debug
         [print(f"{property}: {value}") for property, value in vars(self).items()]
+
+    def is_shell_compatible(self, shell_version):
+        for key in self.shell_version_map:
+            return True if shell_version.startswith(key) else False
+
+    def check_upgrade(self):
+        try:
+            remote_extension = self.manager.search(self.uuid)[0]
+            return True
+        except IndexError:
+            print(f"Wrong index. Extension {self.uuid} was not found on server!")
+            return False
+        pass
+
+    def upgrade(self):
+        if self.check_upgrade():
+            self.manager.get_extensions(self.uuid)
+
+    def remove(self):
+        self.manager.remove(self.uuid)
+        self.manager.list_all_extensions()
+
+    def install(self, force = True):
+        if self.manager.get_extension_by_uuid(self.uuid):
+            if force:
+                self.manager.get_extensions(self.uuid)
+            else:
+                return False
+        self.manager.get_extensions(self.uuid)
+        self.manager.list_all_extensions()
+        return True
+
 
 class ExtensionManager():
 
     def __init__(self):
         self.extensions_local_path = os.getenv("HOME") + "/.local/share/gnome-shell/extensions/"
         self.extensions_sys_path = "/usr/share/gnome-shell/extensions/"
+        self.results_extensions = []
         self.results = []
         self.installed_extensions = []
         self.installed = self.list_all_extensions()
@@ -31,6 +81,7 @@ class ExtensionManager():
 
     def list_all_extensions(self):
         installed_extensions = []
+        installed_extensions_objects = []
         uuids = self.list_user_extensions() + self.list_system_extensions()
         enabled_extensions = re.findall(r'\'(.+?)\'', self.run_command("gsettings get org.gnome.shell enabled-extensions"))
         for uuid in uuids:
@@ -56,11 +107,15 @@ class ExtensionManager():
 
             extension_data["name"] = metadata["name"]
             extension_data.update(metadata)
-            self.installed_extensions.append(Extension(**extension_data))
+            extension_data.update({'manager': self})
+            installed_extensions.append(extension_data)
+            # Add Extension objects to ExtensionManager installed
+            installed_extensions_objects.append(Extension(**extension_data))
+            self.installed_extensions = installed_extensions_objects
         return installed_extensions
 
-    def reload_installed_extensions(self):
-        self.installed = self.list_all_extensions()
+    # def reload_installed_extensions(self):
+    #     self.installed = self.list_all_extensions()
 
     def extension_is_local(self, uuid):
         if uuid in self.list_user_extensions():
@@ -83,8 +138,9 @@ class ExtensionManager():
             response = self.get_request("https://extensions.gnome.org/extension-query/?page=1&search=" + query)
         except:
             raise
-            return
+        self.results_extensions = [Extension(manager = self, **i) for i in json.loads(response.text)["extensions"]]
         self.results = json.loads(response.text)["extensions"]
+        return [Extension(manager = self, **i) for i in json.loads(response.text)["extensions"]]
 
     def get_extensions(self, uuid):
         # Parse the extension webpage and get the json from the data-svm element
@@ -131,6 +187,15 @@ class ExtensionManager():
 
     def get_uuid(self, index):
         return self.results[index]["uuid"]
+
+    def get_extension_by_uuid(self, uuid):
+        """ Returns extension object from internal collection
+        """
+        for e in self.installed_extensions:
+            if e.uuid == uuid:
+                return e
+        return False
+
 
     def download(self, url, uuid):
         try:
