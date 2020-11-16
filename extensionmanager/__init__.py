@@ -1,62 +1,44 @@
 #!/usr/bin/python3
-import os, requests, json, lxml.html, subprocess, zipfile, shutil, re
+import os, requests, json, lxml.html, zipfile, shutil, re, dbus
 
 class ExtensionManager():
 
     def __init__(self):
         self.extensions_local_path = os.getenv("HOME") + "/.local/share/gnome-shell/extensions/"
-        self.extensions_sys_path = "/usr/share/gnome-shell/extensions/"
         self.results = []
+        self.bus = dbus.SessionBus()
+        self.shell = self.bus.get_object('org.gnome.Shell', '/org/gnome/Shell')
+        self.get_extension_info = self.shell.get_dbus_method('GetExtensionInfo', 'org.gnome.Shell.Extensions')
         self.installed = self.list_all_extensions()
-        self.version = self.run_command("gnome-shell --version").split()[2]
-    
-    def run_command(self, command):
-        return subprocess.Popen(command, shell=True, stdout=subprocess.PIPE).stdout.read().decode()    
+        shell_iface = dbus.Interface(self.shell, dbus_interface='org.freedesktop.DBus.Properties')
+        self.version = str(shell_iface.GetAll('org.gnome.Shell')['ShellVersion'])
 
     def list_all_extensions(self):
         installed_extensions = []
-        uuids = self.list_user_extensions() + self.list_system_extensions()
-        enabled_extensions = re.findall(r'\'(.+?)\'', self.run_command("gsettings get org.gnome.shell enabled-extensions"))
+        list_extensions = self.shell.get_dbus_method('ListExtensions', 'org.gnome.Shell.Extensions')
+        uuids = list(str(uuid) for uuid in list_extensions().keys())
         for uuid in uuids:
-            extension_local_path = self.extensions_local_path + uuid
-            extension_sys_path = self.extensions_sys_path + uuid
-
-            extension_data = {"uuid": uuid, "local": self.extension_is_local(uuid)}
-            if uuid in enabled_extensions:
-                extension_data["enabled"] = True
-            else:
-                extension_data["enabled"] = False
-            if extension_data["local"] == True:
-                metadata = open(extension_local_path + "/metadata.json", "r").read()
-            else:
-                metadata = open(extension_sys_path + "/metadata.json").read()
-            metadata = json.loads(metadata)
-
-            # Check for preferences
-            if os.path.exists(extension_sys_path + "/prefs.js") or os.path.exists(extension_local_path + "/prefs.js"):
-                extension_data["prefs"] = True
-            else:
-                extension_data["prefs"] = False
-
-            extension_data["name"] = metadata["name"]
+            extension_data = {"uuid": uuid, "local": self.extension_is_local(uuid), "enabled": self.extension_is_enabled(uuid), "prefs": self.extension_has_prefs(uuid), "name": self.get_extension_name(uuid)}
             installed_extensions.append(extension_data)
         return installed_extensions
-    
+
     def extension_is_local(self, uuid):
-        if uuid in self.list_user_extensions():
+        if str(self.get_extension_info(uuid)['path']).startswith('/usr/share/gnome-shell/extensions/'):
+            return False
+        else:
+            return True
+
+    def extension_is_enabled(self, uuid):
+        if self.get_extension_info(uuid)['state'] == 1:
             return True
         else:
             return False
 
-    def list_system_extensions(self):
-        return os.listdir(self.extensions_sys_path)
+    def extension_has_prefs(self, uuid):
+        return bool(self.get_extension_info(uuid)['hasPrefs'])
 
-    def list_user_extensions(self):
-        try:
-            return os.listdir(self.extensions_local_path)
-        except FileNotFoundError:
-            os.mkdir(self.extensions_local_path)
-            return os.listdir(self.extensions_local_path)
+    def get_extension_name(self, uuid):
+        return str(self.get_extension_info(uuid)['name'])
 
     def search(self, query):
         try:
@@ -148,9 +130,15 @@ class ExtensionManager():
             return
         return response
     
-    def set_extension_status(self, uuid, status):
-        self.run_command("gnome-extensions " + status + " " + uuid)
-    
+    def enable_extension(self, uuid):
+        self.shell.get_dbus_method('EnableExtension', 'org.gnome.Shell.Extensions')(uuid)
+
+    def disable_extension(self, uuid):
+        self.shell.get_dbus_method('DisableExtension', 'org.gnome.Shell.Extensions')(uuid)
+
+    def launch_extension_prefs(self, uuid):
+        self.shell.get_dbus_method('LaunchExtensionPrefs', 'org.gnome.Shell.Extensions')(uuid)
+
     def get_zip_path(self, uuid):
         return "/tmp/" + uuid + ".zip"
 
@@ -172,6 +160,4 @@ class ExtensionManager():
             
         except:
             raise
-
-
 

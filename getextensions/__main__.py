@@ -139,7 +139,6 @@ class MainWindow(Gtk.Window):
             itembox.set_center_widget(name_label)
 
             # Check if item has prefs before adding the button
-
             if item["prefs"] == True:
                 config_button = Gtk.Button()
                 config_button.set_halign(Gtk.Align.START)
@@ -247,10 +246,10 @@ class MainWindow(Gtk.Window):
 
     def on_switch_activated(self, switch, gparam, name):
         if switch.get_active():
-            self.extmgr.set_extension_status(name, "enable")
+            self.extmgr.enable_extension(name)
             print(name + " enabled")
         else:
-            self.extmgr.set_extension_status(name, "disable")
+            self.extmgr.disable_extension(name)
             print(name + " disabled")
 
     def on_key_press_event(self, widget, event):
@@ -299,7 +298,7 @@ class MainWindow(Gtk.Window):
                 self.removebutton.set_sensitive(False)
 
     def on_config_button_clicked(self, widget, uuid):
-        self.extmgr.run_command("gnome-extensions prefs " + uuid)
+        self.extmgr.launch_extension_prefs(uuid)
 
 if __name__ == "__main__":
     win = MainWindow()
