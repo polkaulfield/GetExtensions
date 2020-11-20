@@ -10,7 +10,9 @@ class ListBoxRowWithData(Gtk.ListBoxRow):
         self.data = data
         self.add(Gtk.Label(label=data))
 
+# Create main window (I'm too lazy to use glade)
 class MainWindow(Gtk.Window):
+
     def __init__(self):
         Gtk.Window.__init__(self, title="Get Extensions")
         GLib.set_prgname("Get Extensions")
@@ -98,16 +100,15 @@ class MainWindow(Gtk.Window):
         # Add no results to listbox
         self.listbox1.add(ListBoxRowWithData("Search to show results!"))
         self.listbox1.set_sensitive(False)
-
+    
     def show_installed_extensions(self):
         # Clear old entries
         for entry in self.listbox2.get_children():
             self.listbox2.remove(entry)
+        
+        extensions_list = self.extmgr.list_extensions()
 
-        # Refresh installed extensions (todo with get property, kinda spaghetti now)
-        self.extmgr.list_all_extensions()
-
-        for item in self.extmgr.installed:
+        for uuid, value in extensions_list.items():
             # Create a box for each item
             itembox = Gtk.Box()
 
@@ -117,19 +118,19 @@ class MainWindow(Gtk.Window):
 
             # Check if the extension name is longer than 30 chars and trim it for label
             num = 30
-            if len(item["name"]) >= num:
-                name_label.set_text(str=item["name"][:num] + "...")
+            if len(value["name"]) >= num:
+                name_label.set_text(str=value["name"][:num] + "...")
             else:
-                name_label.set_text(str=item["name"])
+                name_label.set_text(str=value["name"])
 
             # Create switch
             switch = Gtk.Switch()
             fixed_switch = Gtk.Fixed()
             fixed_switch.put(switch, 0, 0)
             fixed_switch.set_valign(Gtk.Align.CENTER)
-            switch.connect("notify::active", self.on_switch_activated, item["uuid"])
+            switch.connect("notify::active", self.on_switch_activated, uuid)
 
-            if item["enabled"] == True:
+            if value["state"] == 1:
                 switch.set_active(True)
             else:
                 switch.set_active(False)
@@ -140,13 +141,13 @@ class MainWindow(Gtk.Window):
 
             # Check if item has prefs before adding the button
 
-            if item["prefs"] == True:
+            if value["hasPrefs"] == True:
                 config_button = Gtk.Button()
                 config_button.set_halign(Gtk.Align.START)
                 config_icon = Gtk.Image()
                 config_icon.set_from_icon_name(Gtk.STOCK_PREFERENCES, Gtk.IconSize.SMALL_TOOLBAR)
                 config_button.add(config_icon)
-                config_button.connect("clicked", self.on_config_button_clicked, item["uuid"])
+                config_button.connect("clicked", self.on_config_button_clicked, uuid)
                 itembox.pack_end(config_button, False, False, 0)
 
             # Create the listbox row
@@ -169,18 +170,18 @@ class MainWindow(Gtk.Window):
         dialog.format_secondary_text(str(error_message))
         dialog.run()
         dialog.destroy()
-
+    
     def search_worker(self, query):
         try:
-            self.extmgr.search(query)
+            self.extmgr.search_web(query)
         except Exception as error:
             GLib.idle_add(self.show_error, error)
             GLib.idle_add(self.restore_search_button)
 
-        for index, result in enumerate(self.extmgr.results):
+        for uuid, result in self.extmgr.search_results.items():
             # Download the image into a buffer and render it with pixbuf
             try:
-                img_buffer = self.extmgr.get_image(self.extmgr.get_uuid(index))
+                img_buffer = self.extmgr.get_remote_image(uuid)
             except Exception as error:
                 GLib.idle_add(self.show_error, error)
                 GLib.idle_add(self.restore_search_button)
@@ -192,7 +193,7 @@ class MainWindow(Gtk.Window):
                 img_buffer = Gio.MemoryInputStream.new_from_data(img_buffer, None)
                 pixbuf = Pixbuf.new_from_stream(img_buffer, None)
                 pixbuf = pixbuf.scale_simple(32, 32, InterpType.BILINEAR)
-            self.extmgr.results[index]["pixbuf"] = pixbuf
+            result["pixbuf"] = pixbuf
         GLib.idle_add(self.display_search_results)
 
     def restore_search_button(self):
@@ -202,7 +203,7 @@ class MainWindow(Gtk.Window):
     def display_search_results(self):
         self.search_thread.join()
         self.listbox1.set_sensitive(False)
-        for index, result in enumerate(self.extmgr.results):
+        for result in self.extmgr.search_results.values():
 
             # Create a box for each item
             resultbox = Gtk.Box()
@@ -244,14 +245,12 @@ class MainWindow(Gtk.Window):
         query = self.entry.get_text()
         self.search_thread = threading.Thread(target=self.search_worker, args=(query,))
         self.search_thread.start()
-
-    def on_switch_activated(self, switch, gparam, name):
+    
+    def on_switch_activated(self, switch, gparam, uuid):
         if switch.get_active():
-            self.extmgr.set_extension_status(name, "enable")
-            print(name + " enabled")
+            self.extmgr.enable_extension(uuid)
         else:
-            self.extmgr.set_extension_status(name, "disable")
-            print(name + " disabled")
+            self.extmgr.disable_extension(uuid)
 
     def on_key_press_event(self, widget, event):
         if event.keyval == Gdk.KEY_Return:
@@ -259,49 +258,54 @@ class MainWindow(Gtk.Window):
 
     def on_searchbutton_clicked(self, widget):
         self.show_results()
-
+        
     def on_installbutton_clicked(self, widget):
         self.installbutton.set_sensitive(False)
         id = self.listbox1.get_selected_row().get_index()
+
+        uuid = list(self.extmgr.search_results.keys())[id]
         try:
-            self.extmgr.get_extensions(self.extmgr.results[id]["uuid"])
+            self.extmgr.install_remote_extension(uuid)
         except Exception as error:
             self.show_error(error)
             return
 
         self.installbutton.set_sensitive(True)
         self.show_installed_extensions()
-
+    
     def on_removebutton_clicked(self, widget):
         self.removebutton.set_sensitive(False)
         id = self.listbox2.get_selected_row().get_index()
+        item = list(self.extmgr.list_extensions().values())[id]
+        uuid = list(self.extmgr.list_extensions().keys())[id]
         try:
-            self.extmgr.remove(self.extmgr.installed[id]["uuid"])
+            self.extmgr.uninstall_extension(uuid)
         except Exception as error:
             self.show_error(error)
             return
 
         self.removebutton.set_sensitive(True)
         self.show_installed_extensions()
-
+    
     def on_listbox1_row_selected(self, widget, row):
         self.installbutton.set_sensitive(True)
-
+    
     def on_listbox2_row_selected(self, widget, row):
         selected_row = self.listbox2.get_selected_row()
         if selected_row == None:
             return
         else:
             id = selected_row.get_index()
-            if self.extmgr.installed[id]["local"]:
+            item = list(self.extmgr.list_extensions().values())[id]
+
+            if item["type"] == 2:
                 self.removebutton.set_sensitive(True)
             else:
                 self.removebutton.set_sensitive(False)
-
+    
     def on_config_button_clicked(self, widget, uuid):
-        self.extmgr.run_command("gnome-extensions prefs " + uuid)
+        self.extmgr.launch_extension_prefs(uuid)
 
 if __name__ == "__main__":
     win = MainWindow()
-    win.show_all()
     Gtk.main()
