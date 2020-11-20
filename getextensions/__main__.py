@@ -100,6 +100,9 @@ class MainWindow(Gtk.Window):
         # Add no results to listbox
         self.listbox1.add(ListBoxRowWithData("Search to show results!"))
         self.listbox1.set_sensitive(False)
+
+        # Create the default extension icon pixbuf
+        self.default_icon_pixbuf = Pixbuf.new_from_file(os.path.join(os.path.dirname(__file__), "plugin.png"))
     
     def show_installed_extensions(self):
         # Clear old entries
@@ -188,11 +191,14 @@ class MainWindow(Gtk.Window):
 
             # Check if the extension icon is local (faster searching)
             if img_buffer == None:
-                pixbuf = Pixbuf.new_from_file(os.path.join(os.path.dirname(__file__), "plugin.png"))
+                pixbuf = self.default_icon_pixbuf
             else:
                 img_buffer = Gio.MemoryInputStream.new_from_data(img_buffer, None)
-                pixbuf = Pixbuf.new_from_stream(img_buffer, None)
-                pixbuf = pixbuf.scale_simple(32, 32, InterpType.BILINEAR)
+                try:
+                    pixbuf = Pixbuf.new_from_stream(img_buffer, None)
+                    pixbuf = pixbuf.scale_simple(32, 32, InterpType.BILINEAR)
+                except Exception as error:
+                    pixbuf = self.default_icon_pixbuf
             result["pixbuf"] = pixbuf
         GLib.idle_add(self.display_search_results)
 
