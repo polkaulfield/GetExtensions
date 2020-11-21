@@ -1,17 +1,20 @@
 #!/usr/bin/python3
 import os, gi, threading, extensionmanager
 from extensionmanager import Extension
-gi.require_version('Gtk', '3.0')
+
+gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, GLib, Gio, Gdk
 from gi.repository.GdkPixbuf import Pixbuf, InterpType
 
 from loguru import logger
+
 
 class ListBoxRowWithData(Gtk.ListBoxRow):
     def __init__(self, data):
         super(Gtk.ListBoxRow, self).__init__()
         self.data = data
         self.add(Gtk.Label(label=data))
+
 
 class MainWindow(Gtk.Window):
     def __init__(self):
@@ -27,7 +30,7 @@ class MainWindow(Gtk.Window):
 
         # Create Entry field to grid
         self.entry = Gtk.Entry()
-        self.entry.connect("key-press-event",self.on_key_press_event)
+        self.entry.connect("key-press-event", self.on_key_press_event)
 
         # Create search button
         self.searchbutton = Gtk.Button(label="Search!")
@@ -73,9 +76,9 @@ class MainWindow(Gtk.Window):
 
         # Populate grid1
         self.grid1.add(self.entry)
-        self.grid1.attach(self.searchbutton, 1, 0, 1 ,1)
-        self.grid1.attach(self.listbox1,  0, 1, 2 ,1)
-        self.grid1.attach(self.installbutton,  0, 2, 2 ,1)
+        self.grid1.attach(self.searchbutton, 1, 0, 1, 1)
+        self.grid1.attach(self.listbox1, 0, 1, 2, 1)
+        self.grid1.attach(self.installbutton, 0, 2, 2, 1)
 
         # Define grid2 and set layout
         self.grid2 = Gtk.Grid()
@@ -92,9 +95,17 @@ class MainWindow(Gtk.Window):
 
         # Populate grid2
         self.grid2.add(self.listbox2)
-        self.grid2.attach(self.removebutton, 0, 1, 1 ,1)
-        self.grid2.attach_next_to(self.checkupgratebutton, self.removebutton, Gtk.PositionType.BOTTOM, 1,1)
-        self.grid2.attach_next_to(self.updateProgressBar, self.checkupgratebutton, Gtk.PositionType.BOTTOM, 1,1)
+        self.grid2.attach(self.removebutton, 0, 1, 1, 1)
+        self.grid2.attach_next_to(
+            self.checkupgratebutton, self.removebutton, Gtk.PositionType.BOTTOM, 1, 1
+        )
+        self.grid2.attach_next_to(
+            self.updateProgressBar,
+            self.checkupgratebutton,
+            Gtk.PositionType.BOTTOM,
+            1,
+            1,
+        )
 
         # Create the ExtensionsManagerobject
         self.extmgr = extensionmanager.ExtensionManager()
@@ -157,8 +168,10 @@ class MainWindow(Gtk.Window):
             upgrade_button.add(upgrade_icon)
             # temporary hack
             # extension = self.extmgr.get_extension_by_uuid(item['uuid'])
-            extension = item['uuid']
-            upgrade_button.connect("clicked", self.on_upgrade_button_clicked, extension)
+            # extension = item['uuid']
+            upgrade_button.connect(
+                "clicked", self.on_upgrade_button_clicked, item["uuid"]
+            )
             upgrade_button.set_sensitive(False)
             # if extension.check_new_version():
             #     upgrade_button.set_active(True)
@@ -172,9 +185,13 @@ class MainWindow(Gtk.Window):
                 config_button = Gtk.Button()
                 config_button.set_halign(Gtk.Align.START)
                 config_icon = Gtk.Image()
-                config_icon.set_from_icon_name(Gtk.STOCK_PREFERENCES, Gtk.IconSize.SMALL_TOOLBAR)
+                config_icon.set_from_icon_name(
+                    Gtk.STOCK_PREFERENCES, Gtk.IconSize.SMALL_TOOLBAR
+                )
                 config_button.add(config_icon)
-                config_button.connect("clicked", self.on_config_button_clicked, item["uuid"])
+                config_button.connect(
+                    "clicked", self.on_config_button_clicked, item["uuid"]
+                )
                 itembox.pack_end(config_button, False, False, 0)
 
             # Create the listbox row
@@ -201,10 +218,10 @@ class MainWindow(Gtk.Window):
     def show_sucess(self, message):
         dialog = Gtk.MessageDialog(
             transient_for=self,
-            flags = 0,
+            flags=0,
             message_type=Gtk.MessageType.INFO,
             buttons=Gtk.ButtonsType.OK,
-            text="Success!"
+            text="Success!",
         )
         dialog.format_secondary_text(str(message))
         dialog.run()
@@ -227,7 +244,9 @@ class MainWindow(Gtk.Window):
 
             # Check if the extension icon is local (faster searching)
             if img_buffer == None:
-                pixbuf = Pixbuf.new_from_file(os.path.join(os.path.dirname(__file__), "plugin.png"))
+                pixbuf = Pixbuf.new_from_file(
+                    os.path.join(os.path.dirname(__file__), "plugin.png")
+                )
             else:
                 img_buffer = Gio.MemoryInputStream.new_from_data(img_buffer, None)
                 pixbuf = Pixbuf.new_from_stream(img_buffer, None)
@@ -305,7 +324,9 @@ class MainWindow(Gtk.Window):
         id = self.listbox1.get_selected_row().get_index()
         try:
             self.extmgr.get_extensions(self.extmgr.results[id]["uuid"])
-            self.show_sucess(f"{self.extmgr.results[id]['name']} Installed successfully!")
+            self.show_sucess(
+                f"{self.extmgr.results[id]['name']} Installed successfully!"
+            )
         except Exception as error:
             self.show_error(error)
             return
@@ -346,9 +367,20 @@ class MainWindow(Gtk.Window):
         self.extmgr.run_command("gnome-extensions prefs " + uuid)
 
     def on_upgrade_button_clicked(self, widget, extension: Extension) -> bool:
-        return True if extension.upgrade() else False
+        extension = [
+            e for e in self.extmgr.installed_extensions if e.uuid == extension
+        ][0]
+        if extension.upgrade():
+            widget.set_sensitive(False)
+            self.show_sucess(f"Extension {extension.name} upgraded successfully!")
+            return True
+        widget.set_sensitive(False)
+        self.show_error(f"Extension {extension.name} upgrade failed!")
+        return False
+        # return True if extension.upgrade() else False
 
     def on_checkupgradebutton_clicked(self, widget):
+        buttons = []
         self.updateProgressBar.set_fraction(0.0)
         self.updateProgressBar.set_text("Checking...")
         fraction = round(100 / len(self.extmgr.installed_extensions) / 100, 3)
@@ -357,18 +389,16 @@ class MainWindow(Gtk.Window):
         self.updateProgressBar.set_fraction(fraction)
         for ext in self.extmgr.installed_extensions:
             print(fraction, self.updateProgressBar.get_fraction())
-            self.updateProgressBar.set_fraction(self.updateProgressBar.get_fraction() + fraction)
+            self.updateProgressBar.set_fraction(
+                self.updateProgressBar.get_fraction() + fraction
+            )
             if ext.check_new_version():
                 print(f"{ext.index} {ext.name} Has update")
                 box = self.listbox2.get_children()[ext.index].get_children()[0]
-                button = box.get_children()[3]
-                button.set_sensitive(True)
+                buttons.append(box.get_children()[3])
             while Gtk.events_pending():
                 Gtk.main_iteration()
-        # print(self.listbox2.get_children()[0].get_children()[0].name_label.text)
-        # for item in self.listbox2.get_children():
-        #     print(item, type(item), vars(item))
-        # self.updateProgressBar.set_fraction(1)
+        [b.set_sensitive(True) for b in buttons]
         self.updateProgressBar.set_text("Done.")
 
 
