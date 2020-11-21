@@ -36,18 +36,36 @@ class Extension:
         for key in self.shell_version_map:
             return True if shell_version.startswith(key) else False
 
-    def check_upgrade(self):
+    def check_new_version(self) -> bool:
+        # Checks, if extension has a new version
         try:
             remote_extension = self.manager.search(self.uuid)[0]
-            return True
+            current_shell_version = self.manager.major_version
+            if getattr(remote_extension, "shell_version_map", None):
+                if current_shell_version in remote_extension.shell_version_map.keys():
+                    if remote_extension.shell_version_map[current_shell_version]['version'] > self.version:
+                        return True
+                    else:
+                        return False
+                else:
+                    # get extension version for last supported gnome shell version
+                    remote_latest_shell_version = remote_extension.shell_version_map[sorted(list(remote_extension.shell_version_map.keys()),key=lambda x: float(".".join(x.split(".")[0:2])))[-1:][0]]["version"]
+                    return True if self._formalize_version(remote_latest_shell_version) > self._formalize_version(self.version) else False
+                # else:
+                #     return False
         except IndexError:
             print(f"Wrong index. Extension {self.uuid} was not found on server!")
             return False
         pass
 
+    def _formalize_version(self, version: str) -> float:
+        """ Workaround malformed version numbers like 0.1-
+        """
+        return float(re.match("^\d\.?\d?", str(version)).group())
+
     def upgrade(self):
-        if self.check_upgrade():
-            self.manager.get_extensions(self.uuid)
+        if self.check_new_version():
+            self.install()
 
     def remove(self):
         self.manager.remove(self.uuid)
@@ -74,6 +92,7 @@ class ExtensionManager():
         self.installed_extensions = []
         self.installed = self.list_all_extensions()
         self.version = self.run_command("gnome-shell --version").split()[2]
+        self.major_version = ".".join(self.version.split(".")[0:2]) if len(self.version) > 2 else self.version
 
 
     def run_command(self, command):
@@ -84,6 +103,7 @@ class ExtensionManager():
         installed_extensions_objects = []
         uuids = self.list_user_extensions() + self.list_system_extensions()
         enabled_extensions = re.findall(r'\'(.+?)\'', self.run_command("gsettings get org.gnome.shell enabled-extensions"))
+        index = 0
         for uuid in uuids:
             extension_local_path = self.extensions_local_path + uuid
             extension_sys_path = self.extensions_sys_path + uuid
@@ -106,6 +126,8 @@ class ExtensionManager():
                 extension_data["prefs"] = False
 
             extension_data["name"] = metadata["name"]
+            extension_data['index'] = index
+            index = index + 1
             extension_data.update(metadata)
             extension_data.update({'manager': self})
             installed_extensions.append(extension_data)
@@ -113,9 +135,6 @@ class ExtensionManager():
             installed_extensions_objects.append(Extension(**extension_data))
             self.installed_extensions = installed_extensions_objects
         return installed_extensions
-
-    # def reload_installed_extensions(self):
-    #     self.installed = self.list_all_extensions()
 
     def extension_is_local(self, uuid):
         if uuid in self.list_user_extensions():

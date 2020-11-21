@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 import os, gi, threading, extensionmanager
+from extensionmanager import Extension
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, GLib, Gio, Gdk
 from gi.repository.GdkPixbuf import Pixbuf, InterpType
@@ -45,6 +46,12 @@ class MainWindow(Gtk.Window):
         self.removebutton = Gtk.Button(label="Remove")
         self.removebutton.connect("clicked", self.on_removebutton_clicked)
         self.removebutton.set_sensitive(False)
+        self.checkupgratebutton = Gtk.Button(label="Check upgrade")
+        self.checkupgratebutton.connect("clicked", self.on_checkupgradebutton_clicked)
+        self.checkupgratebutton.set_sensitive(True)
+
+        # Create update progressBar to list2
+        self.updateProgressBar = Gtk.ProgressBar()
 
         # Create tabs
         self.notebook = Gtk.Notebook()
@@ -86,6 +93,8 @@ class MainWindow(Gtk.Window):
         # Populate grid2
         self.grid2.add(self.listbox2)
         self.grid2.attach(self.removebutton, 0, 1, 1 ,1)
+        self.grid2.attach_next_to(self.checkupgratebutton, self.removebutton, Gtk.PositionType.BOTTOM, 1,1)
+        self.grid2.attach_next_to(self.updateProgressBar, self.checkupgratebutton, Gtk.PositionType.BOTTOM, 1,1)
 
         # Create the ExtensionsManagerobject
         self.extmgr = extensionmanager.ExtensionManager()
@@ -118,7 +127,7 @@ class MainWindow(Gtk.Window):
             name_label.set_halign(Gtk.Align.START)
 
             # Check if the extension name is longer than 30 chars and trim it for label
-            num = 30
+            num = 27
             if len(item["name"]) >= num:
                 name_label.set_text(str=item["name"][:num] + "...")
             else:
@@ -139,6 +148,23 @@ class MainWindow(Gtk.Window):
             # Pack everything to itembox
             itembox.pack_start(fixed_switch, False, True, 0)
             itembox.set_center_widget(name_label)
+
+            # Upgrade button
+            upgrade_button = Gtk.Button()
+            upgrade_button.set_halign(Gtk.Align.START)
+            upgrade_icon = Gtk.Image()
+            upgrade_icon.set_from_icon_name(Gtk.STOCK_OK, Gtk.IconSize.SMALL_TOOLBAR)
+            upgrade_button.add(upgrade_icon)
+            # temporary hack
+            # extension = self.extmgr.get_extension_by_uuid(item['uuid'])
+            extension = item['uuid']
+            upgrade_button.connect("clicked", self.on_upgrade_button_clicked, extension)
+            upgrade_button.set_sensitive(False)
+            # if extension.check_new_version():
+            #     upgrade_button.set_active(True)
+            # else:
+            #     upgrade_button.set_active(False)
+            itembox.pack_end(upgrade_button, False, False, 0)
 
             # Check if item has prefs before adding the button
 
@@ -318,6 +344,32 @@ class MainWindow(Gtk.Window):
 
     def on_config_button_clicked(self, widget, uuid):
         self.extmgr.run_command("gnome-extensions prefs " + uuid)
+
+    def on_upgrade_button_clicked(self, widget, extension: Extension) -> bool:
+        return True if extension.upgrade() else False
+
+    def on_checkupgradebutton_clicked(self, widget):
+        self.updateProgressBar.set_fraction(0.0)
+        self.updateProgressBar.set_text("Checking...")
+        fraction = round(100 / len(self.extmgr.installed_extensions) / 100, 3)
+        print(len(self.extmgr.installed_extensions))
+        print(fraction)
+        self.updateProgressBar.set_fraction(fraction)
+        for ext in self.extmgr.installed_extensions:
+            print(fraction, self.updateProgressBar.get_fraction())
+            self.updateProgressBar.set_fraction(self.updateProgressBar.get_fraction() + fraction)
+            if ext.check_new_version():
+                print(f"{ext.index} {ext.name} Has update")
+                box = self.listbox2.get_children()[ext.index].get_children()[0]
+                button = box.get_children()[3]
+                button.set_sensitive(True)
+            while Gtk.events_pending():
+                Gtk.main_iteration()
+        # print(self.listbox2.get_children()[0].get_children()[0].name_label.text)
+        # for item in self.listbox2.get_children():
+        #     print(item, type(item), vars(item))
+        # self.updateProgressBar.set_fraction(1)
+        self.updateProgressBar.set_text("Done.")
 
 
 if __name__ == "__main__":
