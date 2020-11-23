@@ -5,17 +5,21 @@ from gi.repository import Gtk, GLib, Gio, Gdk
 from gi.repository.GdkPixbuf import Pixbuf, InterpType
 
 # Create main window (I'm too lazy to use glade)
-class MainWindow(Gtk.Window):
+class MainWindow(Gtk.ApplicationWindow):
 
     def __init__(self):
-        Gtk.Window.__init__(self, title="Get Extensions")
-        GLib.set_prgname("Get Extensions")
+
+        # Set app name
+        appname = "Get Extensions"
+        Gtk.Window.__init__(self, title=appname)
+        self.set_wmclass(appname,appname) # Deprecated but its the only workaround I found for GNOME on X11
+        GLib.set_prgname(appname)
         self.connect("destroy", Gtk.main_quit)
 
         # Create Headerbar
         hb = Gtk.HeaderBar()
         hb.set_show_close_button(True)
-        hb.props.title = "Get Extensions"
+        hb.props.title = appname
         self.set_titlebar(hb)
 
         # Disable resizing
