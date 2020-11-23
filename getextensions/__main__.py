@@ -4,25 +4,26 @@ gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, GLib, Gio, Gdk
 from gi.repository.GdkPixbuf import Pixbuf, InterpType
 
-class ListBoxRowWithData(Gtk.ListBoxRow):
-    def __init__(self, data):
-        super(Gtk.ListBoxRow, self).__init__()
-        self.data = data
-        self.add(Gtk.Label(label=data))
-
 # Create main window (I'm too lazy to use glade)
-class MainWindow(Gtk.Window):
+class MainWindow(Gtk.ApplicationWindow):
 
     def __init__(self):
-        Gtk.Window.__init__(self, title="Get Extensions")
-        GLib.set_prgname("Get Extensions")
+
+        # Set app name
+        appname = "Get Extensions"
+        Gtk.Window.__init__(self, title=appname)
+        self.set_wmclass(appname,appname) # Deprecated but its the only workaround I found for GNOME on X11
+        GLib.set_prgname(appname)
         self.connect("destroy", Gtk.main_quit)
 
         # Create Headerbar
         hb = Gtk.HeaderBar()
         hb.set_show_close_button(True)
-        hb.props.title = "Get Extensions"
+        hb.props.title = appname
         self.set_titlebar(hb)
+
+        # Disable resizing
+        self.set_resizable(False)
 
         # Create Entry field to grid
         self.entry = Gtk.Entry()
@@ -39,6 +40,10 @@ class MainWindow(Gtk.Window):
         self.installbutton.connect("clicked", self.on_installbutton_clicked)
         self.installbutton.set_sensitive(False)
 
+        self.scroll1 = Gtk.ScrolledWindow()
+        self.scroll1.set_size_request(-1, 400)
+        self.scroll1.add(self.listbox1)
+
         # Create and attach ListBox2 and delete button to page2
         self.listbox2 = Gtk.ListBox()
         self.listbox2.connect("row-selected", self.on_listbox2_row_selected)
@@ -46,46 +51,50 @@ class MainWindow(Gtk.Window):
         self.removebutton.connect("clicked", self.on_removebutton_clicked)
         self.removebutton.set_sensitive(False)
 
+        self.scroll2 = Gtk.ScrolledWindow()
+        self.scroll2.set_size_request(-1, 445)
+        self.scroll2.add(self.listbox2)
+
         # Create tabs
-        self.notebook = Gtk.Notebook()
-        self.notebook.set_halign(Gtk.Align.CENTER)
-        self.add(self.notebook)
+        notebook = Gtk.Notebook()
+        notebook.set_halign(Gtk.Align.CENTER)
+        self.add(notebook)
 
         # Define grid1 and set layout
-        self.grid1 = Gtk.Grid()
-        self.notebook.append_page(self.grid1, Gtk.Label(label="Download Extensions"))
+        grid1 = Gtk.Grid()
+        notebook.append_page(grid1, Gtk.Label(label="Download Extensions"))
 
         # Set grid1 padding
-        self.grid1.set_column_homogeneous(True)
-        self.grid1.set_margin_top(10)
-        self.grid1.set_margin_bottom(10)
-        self.grid1.set_margin_start(10)
-        self.grid1.set_margin_end(10)
-        self.grid1.set_column_spacing(10)
-        self.grid1.set_row_spacing(10)
+        grid1.set_column_homogeneous(True)
+        grid1.set_margin_top(10)
+        grid1.set_margin_bottom(10)
+        grid1.set_margin_start(10)
+        grid1.set_margin_end(10)
+        grid1.set_column_spacing(10)
+        grid1.set_row_spacing(10)
 
         # Populate grid1
-        self.grid1.add(self.entry)
-        self.grid1.attach(self.searchbutton, 1, 0, 1 ,1)
-        self.grid1.attach(self.listbox1,  0, 1, 2 ,1)
-        self.grid1.attach(self.installbutton,  0, 2, 2 ,1)
+        grid1.add(self.entry)
+        grid1.attach(self.searchbutton, 1, 0, 1 ,1)
+        grid1.attach(self.scroll1,  0, 1, 2 ,1)
+        grid1.attach(self.installbutton,  0, 2, 2 ,1)
 
         # Define grid2 and set layout
-        self.grid2 = Gtk.Grid()
-        self.notebook.append_page(self.grid2, Gtk.Label(label="Installed Extensions"))
+        grid2 = Gtk.Grid()
+        notebook.append_page(grid2, Gtk.Label(label="Installed Extensions"))
 
         # Set grid2 padding
-        self.grid2.set_column_homogeneous(True)
-        self.grid2.set_margin_top(10)
-        self.grid2.set_margin_bottom(10)
-        self.grid2.set_margin_start(10)
-        self.grid2.set_margin_end(10)
-        self.grid2.set_column_spacing(10)
-        self.grid2.set_row_spacing(10)
+        grid2.set_column_homogeneous(True)
+        grid2.set_margin_top(10)
+        grid2.set_margin_bottom(10)
+        grid2.set_margin_start(10)
+        grid2.set_margin_end(10)
+        grid2.set_column_spacing(10)
+        grid2.set_row_spacing(10)
 
         # Populate grid2
-        self.grid2.add(self.listbox2)
-        self.grid2.attach(self.removebutton, 0, 1, 1 ,1)
+        grid2.add(self.scroll2)
+        grid2.attach(self.removebutton, 0, 1, 1 ,1)
 
         # Create the ExtensionsManagerobject
         self.extmgr = extensionmanager.ExtensionManager()
@@ -98,8 +107,14 @@ class MainWindow(Gtk.Window):
         self.entry.grab_focus()
 
         # Add no results to listbox
-        self.listbox1.add(ListBoxRowWithData("Search to show results!"))
+        name_label = Gtk.Label()
+        name_label.set_halign(Gtk.Align.CENTER)
+        name_label.set_text(str="Search to show results!")
+        listboxrow = Gtk.ListBoxRow()
+        listboxrow.add(name_label)
+        self.listbox1.insert(listboxrow, 5)
         self.listbox1.set_sensitive(False)
+        self.listbox1.show_all()
 
         # Create the default extension icon pixbuf
         self.default_icon_pixbuf = Pixbuf.new_from_file(os.path.join(os.path.dirname(__file__), "plugin.png"))
