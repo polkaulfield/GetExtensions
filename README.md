@@ -1,6 +1,6 @@
 # GetExtensions
 
-![GetExtensions Icon](data/getextensions.png?raw=true)
+![GetExtensions Icon](data/getextensions.svg?raw=true)
 
 Python GTK app to install extensions from extensions.gnome.org.
 It can search from the website, get the lastest extension compatible with your GNOME version and install, uninstall, enable and disable them.

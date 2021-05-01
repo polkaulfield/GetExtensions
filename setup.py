@@ -12,7 +12,7 @@ setup(name='getextensions',
       include_package_data=True,
       data_files=[
         ('share/applications', ['data/org.getextensions.desktop']),
-        ('share/icons/hicolor/128x128/apps', ['data/getextensions.png'])],
+        ('share/icons/hicolor/128x128/apps', ['data/getextensions.svg'])],
       install_requires=[
           'requests', 'lxml',
       ],
