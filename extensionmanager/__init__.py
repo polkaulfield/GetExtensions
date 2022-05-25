@@ -26,7 +26,7 @@ class ExtensionManager():
 
     # Public Methods
     def shell_version(self):
-        return self.__getproperty("ShellVersion")
+        return self.__getproperty("ShellVersion").get_string()
     
     def list_extensions(self):
         return self.__callmethod("ListExtensions", None)
@@ -65,25 +65,43 @@ class ExtensionManager():
             return False
         elif state == 2:
             return True
-            
+
+    def version_to_float(self, version):
+        version = version.replace(".beta", "")
+        arr = version.split(".")
+        if len(arr) > 2:
+            arr = arr[:-1]
+            version = ".".join(arr)
+        return float(version)
+
     # Web related stuff
     def search_web(self, query):
         self.search_results = []
         response = requests.get("https://extensions.gnome.org/extension-query/?page=1&search=" + query)
         response = json.loads(response.text)["extensions"]
 
+
+        compatible_extensions = []
+        shell_version = self.version_to_float(self.shell_version())
+        for extension in response:
+            for key in extension["shell_version_map"].keys():
+                extension_version = self.version_to_float(key)
+                if extension_version >= shell_version:
+                    compatible_extensions.append(extension)
+                    break
+
         # Populate array with null objects to match the size of the ordered one
-        self.search_results = [None] * len(response)
+        self.search_results = [None] * len(compatible_extensions)
         sorted_names = []
 
         # Sort all the names in the response object
-        for item in response:
+        for item in compatible_extensions:
             sorted_names.append(item["name"])
         
         sorted_names = sorted(sorted_names, key=str.casefold)
 
         # Place all the items inside a ordered array
-        for item in response:
+        for item in compatible_extensions:
             for i in range(0, len(sorted_names)):
                 if item["name"] == sorted_names[i]:
                     self.search_results[i] = item

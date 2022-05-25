@@ -172,6 +172,8 @@ class MainWindow(Gtk.ApplicationWindow):
             # Create the listbox row
             listboxrow = Gtk.ListBoxRow()
             listboxrow.add(itembox)
+            # Add tooltip
+            listboxrow.set_tooltip_text(item["description"])
             self.listbox2.add(listboxrow)
 
         # Display after refresh
@@ -243,6 +245,9 @@ class MainWindow(Gtk.ApplicationWindow):
 
             listboxrow = Gtk.ListBoxRow()
             listboxrow.add(resultbox)
+            
+            listboxrow.set_tooltip_text(item["description"])
+
             self.listbox1.add(listboxrow)
 
         self.listbox1.show_all()
