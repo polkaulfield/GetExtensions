@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 from gi.repository import Gio, GLib
-import requests, json
+import requests, json, math
 
 class ExtensionManager():
 
@@ -83,9 +83,16 @@ class ExtensionManager():
 
         compatible_extensions = []
         shell_version = self.version_to_float(self.shell_version())
+
+        # fix for gnome versions 40+ (website gives 4x versions instead of 4x.x)
+        if shell_version > 40:
+            shell_version = math.floor(shell_version)
+
         for extension in response:
             for key in extension["shell_version_map"].keys():
                 extension_version = self.version_to_float(key)
+                print("Extension version " + str(extension_version))
+                print("Shell version " + str(shell_version))
                 if extension_version >= shell_version:
                     compatible_extensions.append(extension)
                     break
